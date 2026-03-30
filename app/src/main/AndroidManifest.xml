@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <application
+        android:name=".core.MyApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MyApplication">
+        <activity
+            android:name=".ui.transfer.AddTransferActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.transfer.TransferActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.returned.ReturnedDetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.store.StockMovementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.customerState.CustomerStatementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.returned.AddReturnedActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.returned.ReturnedActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.payment.AddPaymentActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.payment.PaymentActivity"
+            android:exported="false" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <activity
+            android:name=".ui.CustomersActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AddCompanyActivity"
+            android:exported="false" />
+        <activity
+            android:name=".StatementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AddStakeholderActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.login.LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.inbound.InboundActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.inbound.AddInboundActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.inbound.InboundDetailActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.outbound.OutboundActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.outbound.AddOutboundActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.outbound.OutboundDetailActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.store.StoresActivity"
+            android:exported="false" />
+    </application>
+
+</manifest>

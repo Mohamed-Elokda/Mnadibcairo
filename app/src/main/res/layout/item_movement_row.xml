@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="10dp"
+    android:background="@color/white"
+    android:layout_marginBottom="1dp">
+
+    <TextView
+        android:id="@+id/tvDate"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.2"
+        android:textSize="11sp"
+        android:gravity="center"
+        android:textColor="#424242"/>
+
+    <TextView
+        android:id="@+id/tvType"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.5"
+        android:textSize="11sp"
+        android:gravity="start"
+        android:textColor="#212121"/>
+
+    <TextView
+        android:id="@+id/tvQtyIn"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.8"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#388E3C"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/tvQtyOut"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.8"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#D32F2F"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/tvRunningStock"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#1976D2"
+        android:gravity="center"/>
+
+</LinearLayout>

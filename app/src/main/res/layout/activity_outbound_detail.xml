@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:layoutDirection="rtl"
+    android:background="#F8F9FA"
+    android:id="@+id/mainDetailLayout"
+    tools:context=".ui.outbound.OutboundDetailActivity">
+
+    <TextView
+        android:id="@+id/tvDetailTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="تفاصيل فاتورة الصادر"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@color/black"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+    <LinearLayout
+        android:id="@+id/layoutActions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@+id/tvDetailTitle">
+
+        <Button
+            android:id="@+id/btnExportExcel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Excel"
+            android:layout_margin="4dp"
+            android:backgroundTint="#2E7D32" />
+
+        <Button
+            android:id="@+id/btnExportPdf"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="PDF / طباعة"
+            android:layout_margin="4dp"
+            android:backgroundTint="#C62828" />
+    </LinearLayout>
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp"
+        app:layout_constraintTop_toBottomOf="@id/layoutActions">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView android:id="@+id/tvDetailCustomer" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="العميل: ..." android:textSize="16sp" android:padding="2dp" android:textColor="@color/black"/>
+            <TextView android:id="@+id/tvDetailInvoiceNum" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="رقم الفاتورة: ..." android:textSize="16sp" android:padding="2dp"/>
+            <TextView android:id="@+id/tvDetailDate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="التاريخ: ..." android:textSize="16sp" android:padding="2dp"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintTop_toBottomOf="@id/cardInfo"
+        app:layout_constraintBottom_toTopOf="@id/cardFinancialSummary">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TableLayout
+                android:id="@+id/tableDetailItems"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stretchColumns="*"
+                android:background="@android:color/white">
+
+                <TableRow android:background="#E0E0E0" android:padding="10dp">
+                    <TextView android:text="الصنف" android:textStyle="bold" android:gravity="start" android:layout_weight="1"/>
+                    <TextView android:text="الكمية" android:textStyle="bold" android:gravity="center" />
+                    <TextView android:text="السعر" android:textStyle="bold" android:gravity="center" />
+                    <TextView android:text="الإجمالي" android:textStyle="bold" android:gravity="center" />
+                </TableRow>
+
+            </TableLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardFinancialSummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardElevation="4dp"
+        app:layout_constraintBottom_toTopOf="@id/btnViewPhoto">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="#FFFFFF">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="إجمالي قيمة المبيعات:"/>
+                <TextView android:id="@+id/tvTotalAmount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.00" android:textStyle="bold" android:textColor="@color/black"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="المبلغ المحصل:"/>
+                <TextView android:id="@+id/tvPaidAmount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.00" android:textColor="#2E7D32" android:textStyle="bold"/>
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#EEEEEE" android:layout_marginVertical="8dp"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="المبلغ المتبقي على العميل:" android:textStyle="bold"/>
+                <TextView android:id="@+id/tvRemainingAmount" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.00" android:textColor="#C62828" android:textStyle="bold"/>
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <Button
+        android:id="@+id/btnViewPhoto"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="عرض صورة الفاتورة المرفقة"
+        app:icon="@android:drawable/ic_menu_gallery"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

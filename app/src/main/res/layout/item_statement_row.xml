@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:background="@color/white">
+
+    <TextView
+        android:id="@+id/tvDate"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.2"
+        android:textSize="11sp"
+        android:gravity="center"
+        tools:text="2024-05-01" />
+
+    <TextView
+        android:id="@+id/tvDescription"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.5"
+        android:textSize="11sp"
+        android:gravity="start"
+        tools:text="فاتورة #102" />
+
+    <TextView
+        android:id="@+id/tvItemName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.5"
+        android:textSize="10sp"
+        android:textStyle="italic"
+        android:gravity="center"
+        tools:text="أرز بسمتي" />
+
+    <TextView
+        android:id="@+id/tvQty"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.6"
+        android:textSize="11sp"
+        android:gravity="center"
+        tools:text="10" />
+
+    <TextView
+        android:id="@+id/tvDebit"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="#D32F2F"
+        android:textSize="11sp"
+        android:gravity="center"
+        tools:text="500.0" />
+
+    <TextView
+        android:id="@+id/tvCredit"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="#388E3C"
+        android:textSize="11sp"
+        android:gravity="center"
+        tools:text="0.0" />
+
+    <TextView
+        android:id="@+id/tvBalance"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.2"
+        android:textStyle="bold"
+        android:textSize="11sp"
+        android:gravity="center"
+        tools:text="1500.0" />
+
+</LinearLayout>

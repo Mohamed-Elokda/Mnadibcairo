@@ -1,0 +1,463 @@
+package com.example.myapplication.data
+
+import androidx.room.Embedded
+import com.example.myapplication.data.local.entity.Customer
+import com.example.myapplication.data.local.entity.InboundDetailesEntity
+import com.example.myapplication.data.local.entity.InboundEntity
+import com.example.myapplication.data.local.entity.ItemsEntity
+import com.example.myapplication.data.local.entity.OutboundDetailesEntity
+import com.example.myapplication.data.local.entity.OutboundEntity
+import com.example.myapplication.data.local.entity.OutboundWithCustomer
+import com.example.myapplication.data.local.entity.PaymentEntity
+import com.example.myapplication.data.local.entity.ReturnedDetailsEntity
+import com.example.myapplication.data.local.entity.ReturnedEntity
+import com.example.myapplication.data.local.entity.ReturnedWithNames
+import com.example.myapplication.data.local.entity.StockEntity
+import com.example.myapplication.data.local.entity.StockWithItemName
+import com.example.myapplication.data.local.entity.Supplied
+import com.example.myapplication.data.local.entity.TransferDetailsEntity
+import com.example.myapplication.data.local.entity.TransferEntity
+import com.example.myapplication.data.remote.dto.CustomerDto
+import com.example.myapplication.data.remote.dto.InboundDetailsDto
+import com.example.myapplication.data.remote.dto.InboundDto
+import com.example.myapplication.data.remote.dto.OutboundDetailsDto
+import com.example.myapplication.data.remote.dto.OutboundDto
+import com.example.myapplication.data.remote.dto.ReturnedDetailsDto
+import com.example.myapplication.data.remote.dto.ReturnedDto
+import com.example.myapplication.data.remote.dto.StockDto
+import com.example.myapplication.data.remote.dto.TransferDetailDto
+import com.example.myapplication.data.remote.dto.TransferDto
+import com.example.myapplication.domin.model.Inbound
+import com.example.myapplication.domin.model.InboundDetails
+import com.example.myapplication.domin.model.Items
+import com.example.myapplication.domin.model.Outbound
+import com.example.myapplication.domin.model.OutboundDetails
+import com.example.myapplication.domin.model.PaymentItem
+import com.example.myapplication.domin.model.ReturnedDetailsModel
+import com.example.myapplication.domin.model.ReturnedModel
+import com.example.myapplication.domin.model.ReturnedWithNameModel
+import com.example.myapplication.domin.model.Stock
+import com.example.myapplication.domin.model.SuppliedModel
+import com.example.myapplication.domin.model.Transfer
+import com.example.myapplication.domin.model.TransferDetails
+
+// --- تحويل Inbound ---
+fun InboundEntity.toDomain(): Inbound {
+    return Inbound(
+        id = this.id,
+        userId = this.userId,
+        image = this.image,
+        inboundDate = this.inboundDate.formatToEnglish(),
+        latitude = this.latitude,
+        longitude = this.longitude,
+        isSynced = this.isSynced,
+        invorseNum = this.invorseNum,
+        fromSppliedId = this.fromSppliedId,
+        toSppliedId = this.toSppliedId
+    )
+}
+// في ملف PaymentEntity.kt (خارج الكلاس) أو في ملف منفصل
+fun PaymentEntity.toDomainModel(customerName: String): PaymentItem {
+    return PaymentItem(
+        id = this.id,
+        customerName = customerName,
+        amount = this.amount,
+        date = this.date,
+        paymentType = this.paymentType,
+        userId = this.id // أو قم بتمريره حسب حاجتك
+    )
+}
+fun OutboundDetailesEntity.toDto(): OutboundDetailsDto {
+    return OutboundDetailsDto(
+        // لو الـ ID محلي فقط والسيرفر بيعمل ID تلقائي، ممكن تبعته null
+        // أو تبعته لو السيرفر بيقبله يدوي
+        id = if (this.id.toInt() == 0) null else this.id.toInt(),
+        outbound_id = this.outboundId.toInt(),
+        item_id = this.itemId,
+        amount = this.amount.toDouble(),
+        price = this.price.toDouble()
+    )
+}
+
+
+fun ReturnedModel.toReturnedEntity(): ReturnedEntity{
+    return ReturnedEntity(
+        id = this.id,
+        customerId = this.customerId,
+        returnedDate = returnedDate.toString().formatToEnglish(),
+        latitude = this.latitude,
+        longitude = this.longitude,
+        isSynced = false,
+        userId = this.userId
+    )
+
+
+}
+  fun ReturnedEntity.toReturnedModel(): ReturnedModel{
+    return ReturnedModel(
+        id = this.id,
+        customerId = this.customerId,
+        itemId = 0,
+        returnedDate = returnedDate.toString().formatToEnglish(),
+        latitude = this.latitude,
+        longitude = this.longitude,
+        userId = this.userId
+    )
+
+
+}
+fun ReturnedWithNames.toReturnedModel(): ReturnedWithNameModel {
+    return ReturnedWithNameModel(
+        returnedModel = ReturnedModel(
+            id = this.returned.id,
+            customerId = this.returned.customerId,
+            itemId = 0,
+            returnedDate = this.returned.returnedDate.toString().formatToEnglish(),
+            latitude = this.returned.latitude,
+            longitude = this.returned.longitude,
+            userId = this.returned.userId
+        ),
+        customerName = this.customerName?:"",
+        itemName = this.itemName?:"",
+        totalPrice = 1.1
+    )
+
+
+}
+
+fun ReturnedDetailsEntity.toReturnedDetailsModel(): ReturnedDetailsModel{
+    return ReturnedDetailsModel(
+        id = this.id,
+        returnedId = this.returnedId,
+        itemId = this.itemId,
+        amount = this.amount,
+        price = this.price,
+        itemName = ""
+    )
+}
+fun ReturnedDetailsModel.toReturnedEntity(): ReturnedDetailsEntity{
+    return ReturnedDetailsEntity(
+        id = this.id,
+        returnedId = this.returnedId,
+        itemId = this.itemId,
+        amount = this.amount,
+        price = this.price
+    )
+}
+    // دالة التحويل
+    fun OutboundWithCustomer.toDomain(): Outbound {
+        return Outbound(
+            id = outbound.id,
+            userId = outbound.userId,
+            customerId = outbound.customerId,
+            customerName = customerName?:"", // نمرر الاسم المجلوب من الـ JOIN
+            invorseNumber = outbound.invorseNumber,
+            image = outbound.image,
+            outboundDate = outbound.outboundDate.toString().formatToEnglish(),
+            moneyResive = outbound.moneyResive,
+            isSynced = outbound.isSynced
+        )
+    }
+// في ملف Mappers.kt
+// في ملف Mappers.kt
+fun ReturnedDto.toEntity(): ReturnedEntity {
+    return ReturnedEntity(
+        id = this.id ?: 0, // أو حسب تعريف الـ ID عندك
+        userId = this.user_id,
+        customerId = this.customer_id,
+        isSynced = true,
+        returnedDate = this.returned_date,
+        latitude = this.latitude,
+        longitude = this.longitude// بما أنها قادمة من السيرفر فهي مزامنة بالتأكيد
+    )
+}
+// تحويل بيانات السيرفر إلى جدول المخزن المحلي
+fun StockDto.toEntity(): StockEntity {
+    return StockEntity(
+        id = this.id ?: 0,
+        ItemId = this.itemId,
+        userId = this.userId, // تأكد أن الحقل في Entity هو String أو Int حسب تصميمك
+        CurrentAmount = this.currentAmount.toInt(),
+        isSynced = true // القادم من السيرفر يعتبر مزامناً
+    )
+}
+
+fun Inbound.toEntity(): InboundEntity {
+    return InboundEntity(
+        id = this.id,
+        userId = this.userId,
+        image = this.image,
+        inboundDate = this.inboundDate.toString().formatToEnglish(),
+        latitude = this.latitude,
+        longitude = this.longitude,
+        isSynced = this.isSynced,
+        invorseNum = this.invorseNum,
+        fromSppliedId = this.fromSppliedId,
+        toSppliedId = this.toSppliedId
+    )
+}
+// في ملف Outbound.kt (الدومين)
+fun Outbound.toEntity(): OutboundEntity {
+    return OutboundEntity(
+        id = this.id,
+        userId = this.userId, // تحويل Int إلى String إذا كان الـ Entity يتوقع String
+        customerId = this.customerId,
+        image = this.image,
+        outboundDate = this.outboundDate.toString().formatToEnglish(),
+        latitude = this.latitude,
+        longitude = this.longitude,
+        moneyResive = this.moneyResive,
+        isSynced = this.isSynced,
+        invorseNumber = this.invorseNumber
+        // تأكد من إضافة invorseNumber في الـ OutboundEntity أيضاً إذا لم تكن موجودة
+    )
+}
+fun OutboundDto.toEntity(): OutboundEntity {
+    return OutboundEntity(
+        id = this.id?:0,
+        userId = this.userId, // تحويل Int إلى String إذا كان الـ Entity يتوقع String
+        customerId = this.customerId,
+        image = this.imageUrl,
+        outboundDate = this.outboundDate.toString().formatToEnglish(),
+        latitude = this.latitude,
+        longitude = this.longitude,
+        moneyResive = this.moneyReceive,
+        isSynced = true,
+        invorseNumber = this.invoiceNumber
+        // تأكد من إضافة invorseNumber في الـ OutboundEntity أيضاً إذا لم تكن موجودة
+    )
+}
+// تحويل من Entity (قاعدة البيانات) إلى Domain (الواجهة)
+fun Customer.toDomain(): com.example.myapplication.domin.model.Customer {
+    return com.example.myapplication.domin.model.Customer(
+        id = this.id,
+        userId = this.userId,
+        customerName = this.customerName,
+        CustomerNum = this.CustomerNum,
+        customerDebt = this.customerDebt,
+
+    )
+}
+
+
+// تحويل من Customer Entity إلى Customer Domain Model
+
+
+// تحويل من Outbound Domain Model إلى Entity (للحفظ في قاعدة البيانات)
+
+
+// في ملف OutboundDetails.kt (الدومين)
+fun OutboundDetails.toEntity(outboundId: Long): OutboundDetailesEntity {
+    return OutboundDetailesEntity(
+        id = this.id, // سيقوم Room بتوليده تلقائياً إذا كان 0
+        outboundId = outboundId,
+        itemId = this.itemId,
+        amount = this.amount,
+        price = this.price,
+        isSynced = this.isSynced
+    )
+}
+fun OutboundDetailsDto.toEntity(outboundId: Long): OutboundDetailesEntity {
+    return OutboundDetailesEntity(
+        id = this.id?.toLong()?:0, // سيقوم Room بتوليده تلقائياً إذا كان 0
+        outboundId = outboundId,
+        itemId = this.item_id,
+        amount = this.amount.toInt(),
+        price = this.price,
+        isSynced = true
+    )
+}
+// --- تحويل InboundDetails ---
+fun InboundDetails.toEntity(parentInboundId: Int): InboundDetailesEntity {
+    return InboundDetailesEntity(
+        id = this.id,
+        InboundId = parentInboundId,
+        ItemId = this.ItemId,
+        amount = this.amount
+    )
+}
+fun Customer.toDto() = CustomerDto(
+    id = this.id,
+    user_id = this.userId,
+    customer_name =this.customerName,
+    customer_num = this.CustomerNum,
+    customer_debt = this.customerDebt,
+    is_sync = this.isSync,
+)
+ fun String.formatToEnglish(): String {
+    val arabic = arrayOf("٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩")
+    var result = this
+    for (i in 0..9) {
+        result = result.replace(arabic[i], i.toString())
+    }
+    return result
+}
+fun OutboundEntity.toDto(): OutboundDto {
+    return OutboundDto(
+        id = this.id, // أو سيبه null لو السيرفر هو اللي بيكريه
+        userId = this.userId,
+        customerId = this.customerId,
+        invoiceNumber = this.invorseNumber, // لاحظ لو فيه اختلاف في الحروف (invorse vs invoice)
+        imageUrl = this.image ?: "",
+        outboundDate = this.outboundDate.toString().formatToEnglish(),
+        latitude = this.latitude,
+        longitude = this.longitude,
+        moneyReceive = this.moneyResive.toInt() // تأكد من تحويل الأنواع صح
+    )
+}
+fun InboundDetailesEntity.toDto(): InboundDetailsDto{
+    return InboundDetailsDto(
+        id=this.id,
+        inbound_id = this.InboundId,
+        item_id = this.ItemId,
+        amount = this.amount
+    )
+}
+// تحويل من Entity (Room) إلى DTO (Supabase)
+fun ReturnedEntity.toDto() = ReturnedDto(
+    customer_id = customerId,
+    returned_date = returnedDate,
+    latitude = latitude,
+    longitude = longitude,
+    user_id = this.userId
+)
+
+fun ReturnedDetailsEntity.toDto() = ReturnedDetailsDto(
+    returned_id = returnedId,
+    item_id = itemId,
+    amount = amount,
+    price = price
+)
+fun InboundEntity.toDto(): InboundDto{
+    return InboundDto(
+        user_id = this.userId,
+        invose_id = this.id,
+        image_url = this.image,
+        inbound_date = this.inboundDate.toString().formatToEnglish(),
+        latitude = this.latitude,
+        longitude = this.longitude,
+        is_synced = this.isSynced,
+        id = this.id,
+        fromSupplied_id = this.fromSppliedId,
+        toSupplied_id = this.toSppliedId,
+    )
+}
+// --- تحويل Stock ---
+fun StockEntity.toDomain(): Stock {
+    return Stock(
+        id = this.id,
+        ItemId = this.ItemId,
+        userId = this.userId,
+        InitAmount = this.InitAmount,
+        CurrentAmount = this.CurrentAmount,
+        fristDate = this.fristDate.toString().formatToEnglish(),
+        isSynced = this.isSynced
+    )
+}
+
+
+// تحويل كائن الـ Query (الذي يحتوي على الاسم) إلى كائن الـ Domain
+fun StockWithItemName.toDomain(): Stock {
+    return Stock(
+        id = this.id,
+        ItemId = this.ItemId,
+        itemName = this.itemName, // هنا الاسم الذي جلبناه من جدول الأصناف
+        CurrentAmount = this.CurrentAmount,
+        fristDate = this.fristDate.toString().formatToEnglish(),
+        userId = "",
+        InitAmount = 0,
+        isSynced = false,
+    )
+}
+fun InboundDetailsDto.toEntity(): InboundDetailesEntity {
+    return InboundDetailesEntity(
+        id = this.id ?: 0,
+        ItemId = this.item_id,
+        amount = this.amount,
+        InboundId = this.inbound_id,
+        isSynced = true,
+    )
+}
+// تحويل من Entity (قاعدة البيانات) إلى Domain (المنطق والواجهات)
+fun Supplied.toDomain(): SuppliedModel {
+    return SuppliedModel(
+        id = this.id,
+        suppliedName = this.suppliedName,
+        num = this.num,
+    )
+}
+fun Transfer.toEntity(): TransferEntity {
+    return TransferEntity(
+        id = this.id,
+        transferNum = this.transferNum,
+        fromStoreId = this.fromStoreId,
+        toStoreId = this.toStoreId,
+        date = this.date,
+        userId = this.userId,
+        isSynced = this.isSynced
+    )
+}
+fun TransferEntity.toDto() = TransferDto(
+    fromStoreId = fromStoreId,
+    toStoreId = toStoreId,
+    transferNum = transferNum,
+    date = date,
+    userId = userId
+)
+
+fun TransferDetailsEntity.toDto() = TransferDetailDto(
+    transferId = transferId,
+    itemId = itemId,
+    amount = amount
+)
+// تحويل TransferDetails (Domain) إلى TransferDetailsEntity (Database)
+fun TransferDetails.toEntity(): TransferDetailsEntity {
+    return TransferDetailsEntity(
+        id = this.id,
+        transferId = this.transferId,
+        itemId = this.itemId,
+        amount = this.amount
+    )
+}
+fun InboundDto.toEntity(): InboundEntity {
+    return InboundEntity(
+        id = this.id ?: 0, // إذا كان الـ id نل من السيرفر، نعطيه 0 ليقوم Room بتوليده
+        userId = this.user_id,
+        isSynced = true,
+        invorseNum = this.invose_id,
+        fromSppliedId = this.fromSupplied_id,
+        toSppliedId = this.toSupplied_id,
+        image = this.image_url,
+        inboundDate = this.inbound_date,
+        latitude = this.latitude,
+        longitude = this.longitude // بما أنها قادمة من السيرفر فهي مزامنة بالفعل
+    )
+}
+fun ItemsEntity.toDomain(): Items {
+    return Items(
+        id = this.id,
+        itemName = this.itemName,
+        itemNum = this.itemNum
+    )
+}
+
+// تحويل من Domain Model إلى Entity (لحفظ صنف جديد مثلاً)
+fun Items.toEntity(): ItemsEntity {
+    return ItemsEntity(
+        id = this.id,
+        itemName = this.itemName,
+        itemNum = this.itemNum
+    )
+}
+
+fun Stock.toEntity(): StockEntity {
+    return StockEntity(
+        id = this.id,
+        ItemId = this.ItemId,
+        userId = this.userId,
+        InitAmount = this.InitAmount,
+        CurrentAmount = this.CurrentAmount,
+        fristDate = this.fristDate.toString().formatToEnglish(),
+        isSynced = this.isSynced
+    )
+}
