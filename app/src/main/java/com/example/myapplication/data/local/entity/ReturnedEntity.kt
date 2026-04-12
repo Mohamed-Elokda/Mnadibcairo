@@ -1,5 +1,6 @@
 package com.example.myapplication.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.datetime.LocalDate
@@ -15,6 +16,8 @@ data class ReturnedEntity(
     val latitude: Double,
     val longitude: Double,
     val isSynced: Boolean,
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: Long = System.currentTimeMillis()
 
 
 )

@@ -6,9 +6,11 @@ import android.view.Gravity
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.R
+import com.example.myapplication.core.calculateResult
 import com.example.myapplication.core.scheduleSync
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.Prefs
@@ -94,19 +96,86 @@ class AddInboundActivity : AppCompatActivity() {
         etQuantity = findViewById(R.id.etQuantity)
         tableItems = findViewById(R.id.tableItems)
 
+
+
         // ربط الـ AutoComplete الخاص بالمخازن
         // تأكد أن هذه الـ IDs موجودة فعلياً في ملف activity_add_inbound.xml
         autoFromSupplied = findViewById(R.id.fromAutoSupplier)
+        // في initViews أو onCreate
+        autoItem.threshold = 1
+
+        autoItem.setOnClickListener {
+            autoItem.showDropDown()
+        }
+
+        autoItem.addTextChangedListener { text ->
+            if (text.isNullOrEmpty()) {
+                autoItem.post { autoItem.showDropDown() }
+            }
+        }
+
+// مهم جداً: حفظ العنصر المختار
+        autoItem.setOnItemClickListener { parent, _, position, _ ->
+            selectedItem = parent.getItemAtPosition(position) as Items
+        }
     }
 
     private fun setupObservers() {
         // مراقبة الأصناف
+        // داخل setupObservers
         viewModel.allItems.observe(this) { items ->
-            val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, items)
+            if (items.isNotEmpty() && ::autoItem.isInitialized) {
+
+                val adapter = object : ArrayAdapter<Items>(
+                    this,
+                    android.R.layout.simple_dropdown_item_1line,
+                    ArrayList(items) // نسخة قابلة للتغيير
+                ) {
+
+                    private val fullList = ArrayList(items) // النسخة الأصلية
+
+                    override fun getFilter(): Filter {
+                        return object : Filter() {
+
+                            override fun performFiltering(constraint: CharSequence?): FilterResults {
+                                val results = FilterResults()
+
+                                val filteredList = if (constraint.isNullOrBlank()) {
+                                    fullList
+                                } else {
+                                    val searchTerms = constraint.toString().split("+")
+                                        .map { it.trim() }
+                                        .filter { it.isNotEmpty() }
+
+                                    fullList.filter { item ->
+                                        searchTerms.all { term ->
+                                            item.itemName.contains(term, ignoreCase = true)
+                                        }
+                                    }
+                                }
+
+                                results.values = filteredList
+                                results.count = filteredList.size
+                                return results
+                            }
+
+                            override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                                clear()
+                                if (results != null) {
+                                    addAll(results.values as List<Items>)
+                                }
+                                notifyDataSetChanged()
+                            }
+                        }
+                    }
+                }
             autoItem.setAdapter(adapter)
+            autoItem.setOnClickListener { autoItem.showDropDown() }
             autoItem.setOnItemClickListener { parent, _, position, _ ->
-                selectedItem = parent.getItemAtPosition(position) as Items
+                val selected = parent.getItemAtPosition(position) as Items
+                selectedItem= selected
             }
+                }
         }
 
         // مراقبة المخازن (Supplied) وملء القوائم
@@ -145,8 +214,8 @@ class AddInboundActivity : AppCompatActivity() {
         }
 
         // التحقق من اختيار المخازن
-        if (selectedFromSuppliedId == -1 || selectedToSuppliedId == -1) {
-            Toast.makeText(this, "يرجى اختيار المخزن (من / إلى) أولاً", Toast.LENGTH_SHORT).show()
+        if (selectedFromSuppliedId == -1 ) {
+            Toast.makeText(this, "يرجى اختيار المخزن  أولاً", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -154,13 +223,13 @@ class AddInboundActivity : AppCompatActivity() {
             id = if (isEditMode) editInboundId.toInt() else 0,
             userId = Prefs.getUserId(this) ?: "",
             fromSppliedId = selectedFromSuppliedId,
-            toSppliedId = selectedToSuppliedId,
             image = "",
             inboundDate = if (isEditMode) originalDate ?: getCurrentDate() else getCurrentDate(),
             isSynced = false,
             invorseNum = invoiceNumStr.toInt(),
             latitude = 0.0,
-            longitude = 0.0
+            longitude = 0.0,
+            suppliedName = ""
         )
 
         lifecycleScope.launch {
@@ -179,43 +248,45 @@ class AddInboundActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnSave).text = "تحديث الفاتورة"
         etInvoiceNumber.setText(intent.getStringExtra("INVOICE_NUM"))
 
-        // في حالة التعديل نضع اسم المخزن القادم من القائمة السابقة
+        // استقبال الـ ID لضمان عدم ظهور خطأ "يرجى اختيار المخزن"
+        selectedFromSuppliedId = intent.getIntExtra("SUPPLIED_ID", -1)
         autoFromSupplied.setText(intent.getStringExtra("SUPPLIER"), false)
 
         val detailsLiveData = viewModel.getInboundDetails(editInboundId)
-        val observer = object : Observer<List<InboundDetailWithItemName>> {
-            override fun onChanged(value: List<InboundDetailWithItemName>) {
-                if (isDataLoaded || value.isEmpty()) return
+        detailsLiveData.observe(this) { value ->
+            if (isDataLoaded || value.isEmpty()) return@observe
 
-                tableItems.removeAllViews()
-                tempItemsList.clear()
+            tableItems.removeAllViews()
+            tempItemsList.clear()
 
-                for (detailWithItem in value) {
-                    val detail = InboundDetails(
-                        id = 0,
-                        InboundId = editInboundId.toInt(),
-                        ItemId = detailWithItem.itemId.toInt(),
-                        amount = detailWithItem.quantity,
-                        userId = Prefs.getUserId(this@AddInboundActivity) ?: ""
-                    )
-                    tempItemsList.add(detail)
-                    addTableRow(detail, detailWithItem.itemName)
-                }
-                isDataLoaded = true
-                detailsLiveData.removeObserver(this)
+            for (detailWithItem in value) {
+                val detail = InboundDetails(
+                    id = 0, // نتركه 0 لأننا في الـ Repo نقوم بحذف القديم وإضافة الجديد
+                    InboundId = editInboundId.toInt(),
+                    ItemId = detailWithItem.itemId.toInt(),
+                    amount = detailWithItem.quantity,
+                    userId = Prefs.getUserId(this@AddInboundActivity) ?: ""
+                )
+                tempItemsList.add(detail)
+                addTableRow(detail, detailWithItem.itemName)
             }
+            isDataLoaded = true
         }
-        detailsLiveData.observe(this, observer)
     }
-
     private fun checkAndAddItem() {
-        val qty = etQuantity.text.toString().toIntOrNull() ?: 0
+        val qty = etQuantity.text.toString()
         if (selectedItem == null) {
             autoItem.error = "يجب اختيار صنف"
             return
         }
-        if (qty <= 0) {
-            etQuantity.error = "الكمية خطأ"
+        var result="0"
+        if (qty.isNotEmpty()) {
+             result = calculateResult(qty)
+            etQuantity.setText(result)
+            // لنقل المؤشر لآخر الرقم
+            etQuantity.setSelection(etQuantity.text.length)
+        }else{
+            etQuantity.error = "يجب اختيار صنف"
             return
         }
 
@@ -223,7 +294,7 @@ class AddInboundActivity : AppCompatActivity() {
             id = 0,
             InboundId = if (isEditMode) editInboundId.toInt() else 0,
             ItemId = selectedItem!!.id,
-            amount = qty,
+            amount = result.toInt(),
             userId = Prefs.getUserId(this@AddInboundActivity) ?: ""
         )
 
@@ -233,6 +304,13 @@ class AddInboundActivity : AppCompatActivity() {
         autoItem.text.clear()
         etQuantity.text.clear()
         selectedItem = null
+
+// إعادة تفعيل الاقتراحات
+        autoItem.requestFocus()
+        autoItem.post {
+            (autoItem.adapter as? ArrayAdapter<*>)?.filter?.filter(null)
+            autoItem.showDropDown()
+        }
     }
 
     private fun addTableRow(itemData: InboundDetails, selectName: String) {
@@ -257,7 +335,7 @@ class AddInboundActivity : AppCompatActivity() {
             background = null
             setOnClickListener {
                 tableItems.removeView(row)
-                tempItemsList.remove(itemData)
+                tempItemsList.remove(itemData) // التأكد من حذف البيانات الفعلية
             }
         })
         tableItems.addView(row)

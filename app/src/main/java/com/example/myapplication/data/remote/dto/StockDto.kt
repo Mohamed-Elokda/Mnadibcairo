@@ -17,6 +17,11 @@ data class StockDto(
     @SerialName("current_amount")
     val currentAmount: Double,
 
+    @SerialName("init_amount")
+    val initAmount: Double,
+
+
     @SerialName("updated_at")
-    val updatedAt: String? = null
+    val updatedAt: Long? = null,
+
 )

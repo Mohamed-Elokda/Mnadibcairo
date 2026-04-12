@@ -51,12 +51,16 @@ class StockRepoImpl(
         return combine(
             inboundDao.getInboundByItem(itemId),
             outboundDao.getOutboundByItem(itemId),
-            returnedDao.getReturnsByItem(itemId)
-        ) { inbounds, outbounds, returns ->
+            returnedDao.getReturnsByItem(itemId),
+            stockDao.getStockByItemIdFlow(itemId) // أضفنا تدفق بيانات المخزن هنا
+        ) { inbounds, outbounds, returns, stock ->
             val allMovements = mutableListOf<ItemMovement>()
 
-            // 1. إضافة المشتريات (Inbound)
-            // نستخدم الأسماء الجديدة: it.date, it.transactionType, it.documentNumber, it.qtyIn
+            // 1. استخراج الرصيد الافتتاحي وتاريخ البدء
+            val initialQty = stock?.InitAmount ?: 0
+            val startDate = stock?.fristDate ?: ""
+
+            // 2. إضافة حركات الوارد (Inbound)
             inbounds.forEach {
                 allMovements.add(ItemMovement(
                     date = it.date,
@@ -69,7 +73,7 @@ class StockRepoImpl(
                 ))
             }
 
-            // 2. إضافة المبيعات (Outbound)
+            // 3. إضافة حركات الصادر (Outbound)
             outbounds.forEach {
                 allMovements.add(ItemMovement(
                     date = it.date,
@@ -82,7 +86,7 @@ class StockRepoImpl(
                 ))
             }
 
-            // 3. إضافة المرتجعات (Returned)
+            // 4. إضافة المرتجعات
             returns.forEach {
                 allMovements.add(ItemMovement(
                     date = it.date,
@@ -95,20 +99,32 @@ class StockRepoImpl(
                 ))
             }
 
-            // الترتيب حسب التاريخ (تصاعدياً)
+            // 5. الترتيب حسب التاريخ (تصاعدياً)
             val sortedList = allMovements.sortedBy { it.date }
 
-            // حساب الرصيد التراكمي للمخزن
-            var currentStock = 0
+            // 6. بناء القائمة النهائية مع إضافة "الرصيد الافتتاحي" كأول سطر
+            val finalReport = mutableListOf<ItemMovement>()
+
+            // إضافة سطر الرصيد الافتتاحي في البداية
+            var currentStock = initialQty
+            finalReport.add(ItemMovement(
+                date = startDate,
+                transactionType = "رصيد أول المدة",
+                documentNumber = "---",
+                qtyIn = initialQty,
+                qtyOut = 0,
+                partyName = "المخزن الافتتاحي",
+                runningStock = initialQty
+            ))
+
+            // 7. حساب الرصيد التراكمي بناءً على رصيد أول المدة
             sortedList.forEach { movement ->
                 currentStock += (movement.qtyIn - movement.qtyOut)
                 movement.runningStock = currentStock
+                finalReport.add(movement)
             }
 
-            sortedList
+            finalReport
         }
-
-
     }
-
 }

@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.outbound
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -169,6 +170,7 @@ private fun showUpdateDeleteMenu(view: android.view.View, invoice: Outbound) {
     }
 
 
+    @SuppressLint("UseCompatLoadingForDrawables")
     private fun displayInvoices(invoices: List<Outbound>) {
         // مسح الصفوف القديمة مع الحفاظ على الهيدر (Index 0)
         val childCount = tableOutbound.childCount
@@ -197,7 +199,7 @@ private fun showUpdateDeleteMenu(view: android.view.View, invoice: Outbound) {
             row.addView(createTextView(invoice.customerName))
 
             // 3. التاريخ
-            val formattedDate = invoice.outboundDate.substringBefore(" ")
+            val formattedDate = invoice.outboundDate.take(10).trim()
             row.addView(createTextView(formattedDate))
 
             // 4. المبلغ المستلم
@@ -213,7 +215,7 @@ private fun showUpdateDeleteMenu(view: android.view.View, invoice: Outbound) {
                     putExtra("INVOICE_NUM", invoice.invorseNumber.toString())
                     putExtra("CUSTOMER_NAME", invoice.customerName) // أو اسم العميل إذا توفر
                     putExtra("IMAGE_URL", invoice.image)
-                    putExtra("DATE", invoice.outboundDate)
+                    putExtra("DATE", invoice.outboundDate.take(10).trim())
                     putExtra("PAID_AMOUNT", invoice.moneyResive.toString())
                 }
                 startActivity(intent)

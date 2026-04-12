@@ -1,5 +1,6 @@
 package com.example.myapplication.data.remote.dto
 
+import androidx.room.ColumnInfo
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -9,5 +10,7 @@ data class OutboundDetailsDto(
     val outbound_id: Int,
     val item_id: Int,
     val amount: Double,
-    val price: Double
+    val price: Double,
+    val updated_at: Long? = null // ستقوم Supabase بتعبئته تلقائياً عند الجلب
+
 )

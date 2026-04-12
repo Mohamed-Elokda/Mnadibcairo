@@ -151,14 +151,7 @@ val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.sto
             etInvoiceNumber.error = "مطلوب"
             return
         }
-        if (selectedToStoreId == -1) {
-            Toast.makeText(this, "يرجى اختيار مخزن الوجهة", Toast.LENGTH_SHORT).show()
-            return
-        }
-        if (selectedToStoreId == userStoreId) {
-            Toast.makeText(this, "لا يمكن النقل لمخزنك الخاص!", Toast.LENGTH_SHORT).show()
-            return
-        }
+
         if (transferItemsList.isEmpty()) {
             Toast.makeText(this, "القائمة فارغة!", Toast.LENGTH_SHORT).show()
             return

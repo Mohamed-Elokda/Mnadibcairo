@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Bundle
 import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -17,6 +19,7 @@ import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.R
 import com.example.myapplication.core.LocationHelper
+import com.example.myapplication.core.calculateResult
 import com.example.myapplication.core.scheduleSync
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.Prefs
@@ -34,6 +37,7 @@ import com.example.myapplication.ui.factory.OutboundViewModelFactory
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.text.isNotEmpty
 
 class AddOutboundActivity : AppCompatActivity() {
     private val locationPermissionRequest = registerForActivityResult(
@@ -96,6 +100,8 @@ class AddOutboundActivity : AppCompatActivity() {
     private lateinit var invoceView: EditText
     private lateinit var etReceivedAmount: EditText
     private lateinit var tvTotal: TextView
+    private lateinit var oldAccount: TextView
+    private lateinit var newAccount: TextView
     private lateinit var tableItems: TableLayout
     private lateinit var saveButton: Button
 
@@ -115,6 +121,31 @@ class AddOutboundActivity : AppCompatActivity() {
             saveInvoice()
         }
 
+        etReceivedAmount.addTextChangedListener(object : TextWatcher{
+            override fun afterTextChanged(p0: Editable?) {
+
+            }
+
+            override fun beforeTextChanged(
+                p0: CharSequence?,
+                p1: Int,
+                p2: Int,
+                p3: Int
+            ) {
+            }
+
+            override fun onTextChanged(
+                p0: CharSequence?,
+                p1: Int,
+                p2: Int,
+                p3: Int
+            ) {
+// داخل onTextChanged
+                val received = p0.toString().toDoubleOrNull() ?: 0.0
+                val old = oldAccount.text.toString().toDoubleOrNull() ?: 0.0
+                newAccount.text = (old + totalInvoiceAmount - received).toString()            }
+
+        })
         // استقبال بيانات الذكاء الاصطناعي (Gemini)
     }
 
@@ -140,7 +171,7 @@ class AddOutboundActivity : AppCompatActivity() {
             autoItem.setAdapter(adapter)
             autoItem.setOnItemClickListener { parent, _, position, _ ->
                 selectedItem = parent.getItemAtPosition(position) as Stock
-                Toast.makeText(this@AddOutboundActivity, selectedItem?.ItemId.toString(), Toast.LENGTH_LONG).show()
+
             }
         }
 
@@ -150,6 +181,7 @@ class AddOutboundActivity : AppCompatActivity() {
             autoCustomer.setAdapter(adapter)
             autoCustomer.setOnItemClickListener { _, _, position, _ ->
                 selectedCustomer = adapter.getItem(position)?.id
+                oldAccount.text=adapter.getItem(position)?.customerDebt.toString()
             }
         }
 
@@ -173,21 +205,29 @@ class AddOutboundActivity : AppCompatActivity() {
     }
 
     private fun addItemToTable() {
-        val qty = etQuantity.text.toString().toIntOrNull() ?: 0
+        val qty = etQuantity.text.toString()
         val price = etPrice.text.toString().toDoubleOrNull() ?: 0.0
         val item = selectedItem
 
-        if (item == null || qty <= 0) {
-            Toast.makeText(this, "اختر صنفاً وكمية صحيحة", Toast.LENGTH_SHORT).show()
+
+
+        var result="0"
+        if (qty.isNotEmpty()) {
+            result = calculateResult(qty)
+            etQuantity.setText(result)
+            // لنقل المؤشر لآخر الرقم
+            etQuantity.setSelection(etQuantity.text.length)
+        }else{
+            etQuantity.error = "اختر صنفاً وكمية صحيح"
             return
         }
 
-        val itemTotal = qty * price
+        val itemTotal = result.toInt() * price
 
         // إنشاء كائن التفاصيل
         val detail = OutboundDetails(
-            itemId = item.ItemId,
-            amount = qty,
+            itemId = item?.ItemId!!,
+            amount = result.toInt(),
             price = price,
             outboundId = 0,
             isSynced = false
@@ -195,6 +235,7 @@ class AddOutboundActivity : AppCompatActivity() {
 
         // إضافة للقائمة المؤقتة
         tempDetailsList.add(detail)
+// داخل onTextChanged
 
         // إضافة صف للجدول UI
         val row = TableRow(this).apply {
@@ -202,7 +243,9 @@ class AddOutboundActivity : AppCompatActivity() {
         }
 
         row.addView(TextView(this).apply { text = item.itemName; setPadding(8, 8, 8, 8); layoutParams = TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f) })
-        row.addView(TextView(this).apply { text = qty.toString(); gravity = android.view.Gravity.CENTER; setPadding(8, 8, 8, 8) })
+        row.addView(TextView(this).apply { text = result; gravity = android.view.Gravity.CENTER; setPadding(8, 8, 8, 8) })
+        row.addView(TextView(this).apply { text = price.toString(); gravity = android.view.Gravity.CENTER; setPadding(8, 8, 8, 8) })
+
         row.addView(TextView(this).apply { text = itemTotal.toString(); gravity = android.view.Gravity.CENTER; setPadding(8, 8, 8, 8) })
 
         // إضافة زر الحذف
@@ -216,6 +259,9 @@ class AddOutboundActivity : AppCompatActivity() {
                 tempDetailsList.remove(detail)
                 // 3. تحديث الإجمالي
                 totalInvoiceAmount -= itemTotal
+                val received = etReceivedAmount.text.toString().toDoubleOrNull() ?: 0.0
+                val old = oldAccount.text.toString().toDoubleOrNull() ?: 0.0
+                newAccount.text = (old + totalInvoiceAmount - received).toString()
                 updateUI()
             }
         }
@@ -225,7 +271,9 @@ class AddOutboundActivity : AppCompatActivity() {
 
         totalInvoiceAmount += itemTotal
         updateUI()
-
+        val received = etReceivedAmount.text.toString().toDoubleOrNull() ?: 0.0
+        val old = oldAccount.text.toString().toDoubleOrNull() ?: 0.0
+        newAccount.text = (old + totalInvoiceAmount - received).toString()
         // مسح الحقول للإدخال التالي
         autoItem.setText("")
         etQuantity.setText("")
@@ -329,6 +377,8 @@ class AddOutboundActivity : AppCompatActivity() {
         etReceivedAmount = findViewById(R.id.etPaidAmount)
 
         tvTotal = findViewById(R.id.tvTotalInvoice)
+        oldAccount = findViewById(R.id.oldAccount)
+        newAccount = findViewById(R.id.newAccount)
         tableItems = findViewById(R.id.tableItems)
     }
 }

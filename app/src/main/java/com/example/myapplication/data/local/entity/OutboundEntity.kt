@@ -1,5 +1,6 @@
 package com.example.myapplication.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -15,6 +16,8 @@ data class OutboundEntity (
     val latitude: Double=0.0,
     val longitude: Double=0.0,
     val moneyResive: Int,
-    val isSynced: Boolean
+    val isSynced: Boolean,
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: Long = System.currentTimeMillis()
 
 )

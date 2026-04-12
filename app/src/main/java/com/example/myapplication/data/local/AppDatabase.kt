@@ -33,26 +33,21 @@ import com.example.myapplication.data.local.entity.TransferDetailsEntity
 import com.example.myapplication.data.local.entity.TransferEntity
 
 @Database(entities = [ StockEntity::class, Customer::class, InboundEntity::class, InboundDetailesEntity::class, OutboundEntity::class, OutboundDetailesEntity::class
-                     , ItemsEntity::class, Supplied::class, PaymentEntity::class, ReturnedEntity::class, ReturnedDetailsEntity::class, TransferDetailsEntity::class, TransferEntity::class], version = 18,exportSchema = false)
+                     , ItemsEntity::class, Supplied::class, PaymentEntity::class, ReturnedEntity::class, ReturnedDetailsEntity::class, TransferDetailsEntity::class, TransferEntity::class], version = 20,exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun stockDao(): StockDao
     abstract fun customerDao(): CustomerDao
-
     abstract fun inboundDao(): InboundDao
     abstract fun inboundDetailesDao(): InboundDetailesDao
-
     abstract fun outboundDao(): OutboundDao
     abstract fun outboundDetailesDao(): OutboundDetailesDao
-
     abstract fun itemsDao(): ItemsDao
     abstract fun suppliedDao(): SuppliedDao
     abstract fun PaymentDao(): PaymentDao
-
     abstract fun returnedDao(): ReturnedDao
     abstract fun transferDao(): TransferDao
     abstract fun returnedDetailsDao(): ReturnedDetailsDao
-
 
     companion object {
         @Volatile

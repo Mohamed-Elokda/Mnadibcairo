@@ -257,13 +257,13 @@
                 <ImageView
                     android:layout_width="120dp"
                     android:layout_height="80dp"
-                    android:src="@drawable/returned" />
+                    android:src="@drawable/exchange" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-black"
-                    android:text="مرتجع"
+                    android:text="مناقله"
                     android:textSize="18sp"
                     android:textStyle="bold" />
             </LinearLayout>

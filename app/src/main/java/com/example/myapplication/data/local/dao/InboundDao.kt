@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.myapplication.data.local.entity.InboundEntity
+import com.example.myapplication.data.local.entity.InboundWithSupplier
 import com.example.myapplication.data.local.entity.ItemMovementProjection
 import kotlinx.coroutines.flow.Flow
 
@@ -17,12 +18,26 @@ interface InboundDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertInboundList(inbounds: List<InboundEntity>)
 
-    @Query("SELECT * FROM Inbound where userId=:userId")
-    fun getAllInbound(userId: String): Flow<List<InboundEntity>>
+    @Query("""
+    SELECT 
+        Inbound.id, 
+        Inbound.invorseNum, 
+        Inbound.userId, 
+        Inbound.inboundDate, 
+        Inbound.fromSppliedId, 
+        Inbound.latitude, 
+        Inbound.longitude, 
+        Inbound.image, 
+        Inbound.isSynced, 
+        Supplied.suppliedName AS suppliedName
+    FROM Inbound
+    INNER JOIN Supplied ON Inbound.fromSppliedId = Supplied.id
+    WHERE Inbound.userId = :userId
+""")
+    fun getAllInboundWithSupplierName(userId: String): Flow<List<InboundWithSupplier>>
 
     @Query("SELECT * FROM Inbound WHERE isSynced = 0")
     suspend fun getUnsyncedInbounds(): List<InboundEntity>
-
     @Query("""
         SELECT 
             i.inboundDate as date, 
@@ -40,4 +55,7 @@ interface InboundDao {
 
     @Delete
     suspend fun delete(inbound: InboundEntity)
+
+    @Query("SELECT * FROM Inbound WHERE id = :id LIMIT 1")
+    fun getInboundByIdSync(id: Int): InboundEntity?
 }

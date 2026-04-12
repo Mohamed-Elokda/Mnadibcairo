@@ -1,5 +1,6 @@
 package com.example.myapplication.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -12,5 +13,7 @@ data class TransferEntity(
     val toStoreId: Int,        // المخزن الذي استلم المواد
     val userId: String,
     val date: String,
-    val isSynced: Boolean = false
+    val isSynced: Boolean = false,
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: Long = System.currentTimeMillis()
 )

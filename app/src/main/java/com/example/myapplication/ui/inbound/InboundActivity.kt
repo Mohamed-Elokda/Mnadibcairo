@@ -65,7 +65,17 @@ class InboundActivity : AppCompatActivity() {
             }
 
         }
-
+        etSearch.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val query = s.toString()
+                viewModel.getInbounds(Prefs.getUserId(this@InboundActivity)!!).observe(this@InboundActivity) { list ->
+                    val filteredList = list.filter { it.invorseNum.toString().contains(query)|| it.suppliedName.toString().contains(query) }
+                    displayInboundData(filteredList)
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
 btnAddInbound.setOnClickListener {
     startActivity(Intent(this, AddInboundActivity::class.java))
 }
@@ -92,6 +102,7 @@ btnAddInbound.setOnClickListener {
 
             // رقم الفاتورة (كـ نص يظهر للمستخدم)
             val tvId = TextView(this).apply {
+
                 text = inbound.invorseNum.toString()
                 setPadding(8, 8, 8, 8)
             }
@@ -104,7 +115,7 @@ btnAddInbound.setOnClickListener {
 
             // اسم المورد
             val tvSupplier = TextView(this).apply {
-                text = inbound.fromSppliedId.toString() // يفضل لاحقاً عمل Join لعرض الاسم بدلاً من الرقم
+                text = inbound.suppliedName.toString() // يفضل لاحقاً عمل Join لعرض الاسم بدلاً من الرقم
                 setPadding(8, 8, 8, 8)
             }
 
@@ -123,7 +134,7 @@ btnAddInbound.setOnClickListener {
 
                     // تمرير البيانات المتاحة لتقليل الضغط على قاعدة البيانات في الشاشة التالية
                     putExtra("INVOICE_NUM", inbound.invorseNum.toString())
-                    putExtra("SUPPLIER", inbound.toSppliedId)
+                    putExtra("SUPPLIER", inbound.suppliedName)
                     putExtra("DATE", inbound.inboundDate)
 
                     // إذا كانت بيانات الصور والمبالغ متوفرة في كائن Inbound مررها أيضاً

@@ -1,5 +1,6 @@
 package com.example.myapplication.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -9,5 +10,7 @@ data class TransferDetailsEntity(
     val id: Int = 0,
     val transferId: Int,       // ربط مع الجدول الرئيسي
     val itemId: Int,
-    val amount: Int
+    val amount: Int,
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: Long = System.currentTimeMillis()
 )

@@ -21,6 +21,7 @@ import com.example.myapplication.domin.model.Items
 import com.example.myapplication.domin.model.Stock
 import com.example.myapplication.domin.useCase.AddInboundUseCase
 import com.example.myapplication.domin.useCase.GetInboundDetailsUseCase
+import com.example.myapplication.domin.useCase.GetStockFromServer
 import com.example.myapplication.domin.useCase.GetStockUseCase
 import com.example.myapplication.ui.inbound.InboundViewModel
 import com.example.myapplication.ui.inbound.InboundViewModelFactory
@@ -32,7 +33,7 @@ import org.apache.poi.ss.usermodel.WorkbookFactory
 class StoresActivity : AppCompatActivity() {
 
     private lateinit var tableInventory: TableLayout
-
+    private lateinit var swipeRefresh: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
     // لانشر اختيار ملف الإكسيل
     private val excelPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { readExcelFile(it) }
@@ -53,11 +54,20 @@ class StoresActivity : AppCompatActivity() {
     }
 
     // ViewModel الخاص بعرض المخزن (Store)
+    // داخل StoresActivity.kt
     private val storeViewModel: StoreViewModel by viewModels {
         val database = AppDatabase.getDatabase(this)
-        val repo = StockRepoImpl(database.inboundDao(),database.outboundDao(),database.returnedDao(),database.stockDao())
+        val repo = StockRepoImpl(
+            database.inboundDao(),
+            database.outboundDao(),
+            database.returnedDao(),
+            database.stockDao()
+        )
         val getStockUseCase = GetStockUseCase(repo)
-        StoreViewModelFactory(getStockUseCase)
+        val getStockFromServer = GetStockFromServer(repo)
+
+        // نمرر الـ Context للـ Factory فقط وليس للـ ViewModel
+        StoreViewModelFactory(this, getStockUseCase, getStockFromServer)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,16 +80,23 @@ class StoresActivity : AppCompatActivity() {
 
     private fun initViews() {
         tableInventory = findViewById(R.id.tableInventory)
-
+        swipeRefresh = findViewById(R.id.swipeRefresh)
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener { finish() }
 
-
-        findViewById<Button>(R.id.btnAddProductFromExel).setOnClickListener {
-            excelPickerLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        swipeRefresh.setOnRefreshListener {
+            storeViewModel.refreshStock()
         }
+
     }
 
     private fun setupObservers() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                storeViewModel.isRefreshing.collect { refreshing ->
+                    swipeRefresh.isRefreshing = refreshing
+                }
+            }
+        }
         // مراقبة حالة المخزن وعرضها في الجدول
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

@@ -13,5 +13,7 @@ data class OutboundDto(
     @SerialName("outbound_date") val outboundDate: String? = null,
     @SerialName("latitude") val latitude: Double,
     @SerialName("longitude") val longitude: Double,
-    @SerialName("money_receive") val moneyReceive: Int
+    @SerialName("money_receive") val moneyReceive: Int,
+    val updated_at: Long? = null // ستقوم Supabase بتعبئته تلقائياً عند الجلب
+
 )

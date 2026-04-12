@@ -19,6 +19,9 @@ interface StockDao {
     // دالة مفيدة لتصفير المخزن قبل المزامنة الشاملة (اختياري)
     @Query("DELETE FROM Stock WHERE userId = :userId")
     suspend fun clearStockForUser(userId: String)
+
+    @Query("SELECT * FROM Stock WHERE ItemId = :itemId LIMIT 1")
+    fun getStockByItemIdFlow(itemId: Int): Flow<StockEntity?>
     @Query("""
     SELECT 
         Stock.id, 

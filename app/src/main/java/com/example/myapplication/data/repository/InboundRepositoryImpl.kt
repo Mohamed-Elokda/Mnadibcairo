@@ -42,7 +42,7 @@ class InboundRepositoryImpl(
     private val itemsDao: ItemsDao
 ) : IInboundRepository {
     override fun getAllInbounds(userId: String): Flow<List<Inbound>> =
-        inboundDao.getAllInbound(userId).map { list ->
+        inboundDao.getAllInboundWithSupplierName(userId).map { list ->
             list.map { it.toDomain() } // دالة تحويل من Entity لـ Domain
         }
 
@@ -119,26 +119,42 @@ class InboundRepositoryImpl(
     suspend fun syncUnsynced(): Result<Unit> {
         return try {
             val unsyncedInbounds = inboundDao.getUnsyncedInbounds()
+
             for (inbound in unsyncedInbounds) {
-                // 1. رفع الفاتورة الرئيسية وتأكيد إرسال الـ ID المحلي
-// 1. ارفع الفاتورة مع طلب إرجاع البيانات (select)
-                val response = supabase.from("inbound").upsert(inbound.toDto()) {
+                // تحديث وقت التعديل قبل الإرسال لضمان مزامنة التوقيت
+                val currentTime = System.currentTimeMillis()
+                val inboundWithTime = inbound.copy(updatedAt = currentTime)
+
+                // 1. استخدام upsert للفاتورة (سيقوم بتحديث الـ updated_at في Supabase)
+                val response = supabase.from("inbound").upsert(inboundWithTime.toDto()) {
                     select()
-                }.decodeSingle<InboundDto>() // تحويل النتيجة لكائن DTO يحتوي على الـ ID الجديد
+                }.decodeSingle<InboundDto>()
 
-                val newInboundIdFromSupabase = response.id // هذا هو الـ ID الذي وُلد في السيرفر
+                val serverInboundId = response.id
 
-                // 2. جلب التفاصيل المرتبطة بهذا الـ ID تحديداً
+                // 2. جلب التفاصيل وتحديث توقيتها أيضاً
                 val details = detailsDao.getDetailsByInboundIdSync(inbound.id)
 
-                if (details.isNotEmpty()) {
-                    // 3. رفع التفاصيل دفعة واحدة
-                    // تأكد أن toDto() في التفاصيل تضع قيمة inbound_id = inbound.id
-                    supabase.from("inbound_details").upsert(details.map { it.toDto().copy(id=newInboundIdFromSupabase) })
+                // 3. مسح التفاصيل القديمة في السيرفر لضمان مطابقة التعديل الأخير
+                supabase.from("inbound_details").delete {
+                    filter { eq("inbound_id", serverInboundId) }
+                }
 
-                    // 4. تحديث الحالة محلياً "فقط" بعد نجاح الرفع للسيرفر
-                    inboundDao.insert(inbound.copy(isSynced = true))
-                    details.forEach { detailsDao.insert(it.copy(isSynced = true)) }
+                // 4. رفع التفاصيل الجديدة مع توقيت التحديث الجديد
+                if (details.isNotEmpty()) {
+                    val detailsDtos = details.map {
+                        it.toDto().copy(
+                            inbound_id = serverInboundId,
+                            updated_at = currentTime // نفس وقت تحديث الفاتورة الرئيسية
+                        )
+                    }
+                    supabase.from("inbound_details").upsert(detailsDtos)
+                }
+
+                // 5. تحديث الحالة محلياً
+                inboundDao.insert(inboundWithTime.copy(isSynced = true))
+                details.forEach {
+                    detailsDao.insert(it.copy(isSynced = true, updatedAt = currentTime))
                 }
             }
             Result.success(Unit)
@@ -147,6 +163,7 @@ class InboundRepositoryImpl(
             Result.failure(e)
         }
     }
+
     override suspend fun addInSupbase(inbound: Inbound, details: List<InboundDetails>) {
         withContext(Dispatchers.IO + NonCancellable) { // هذا السطر يمنع إلغاء العملية
             syncUnsynced()
@@ -236,31 +253,32 @@ class InboundRepositoryImpl(
     }    // داخل InboundRepoImpl.kt
     override suspend fun syncInboundFromServer(userId: String) {
         try {
-            // 1. جلب رؤوس فواتير الوارد
             val remoteInbounds = supabase.from("inbound")
                 .select { filter { eq("user_id", userId) } }
                 .decodeList<InboundDto>()
 
-            if (remoteInbounds.isNotEmpty()) {
-                // تحويل إلى Entity وحفظ في Room
-                val entities = remoteInbounds.map { it.toEntity() }
-                inboundDao.insertInboundList(entities)
+            remoteInbounds.forEach { remoteDto ->
+                // جلب النسخة المحلية من الفاتورة
+                val localInbound = inboundDao.getInboundByIdSync(remoteDto.id)
 
-                // 2. جلب التفاصيل لكل فاتورة وارد
-                remoteInbounds.forEach { inbound ->
+                // المزامنة فقط إذا كانت بيانات السيرفر أحدث أو إذا كانت الفاتورة غير موجودة محلياً
+                // وإذا كانت الفاتورة المحلية "مزامنة بالفعل" (isSynced == true)
+                if (localInbound == null || (remoteDto.updated_at ?: 0 > localInbound.updatedAt)) {
+                    inboundDao.insert(remoteDto.toEntity().copy(isSynced = true))
+
+                    // جلب التفاصيل وتحديثها أيضاً
                     val details = supabase.from("inbound_details")
-                        .select { filter { eq("inbound_id", inbound.id) } }
+                        .select { filter { eq("inbound_id", remoteDto.id) } }
                         .decodeList<InboundDetailsDto>()
 
                     if (details.isNotEmpty()) {
-                        detailsDao.insertInboundDetailsList(details.map { it.toEntity() })
+                        detailsDao.insertInboundDetailsList(details.map { it.toEntity().copy(isSynced = true) })
                     }
                 }
             }
         } catch (e: Exception) {
-            Log.e("Sync", "خطأ في جلب الوارد: ${e.message}")
+            Log.e("Sync", "خطأ في جلب البيانات الأحدث: ${e.message}")
         }
     }
-
 
 }

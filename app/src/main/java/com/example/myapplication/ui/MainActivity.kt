@@ -24,6 +24,8 @@ import com.example.myapplication.data.repository.CustomerRepoImpl
 import com.example.myapplication.data.repository.InboundRepositoryImpl
 import com.example.myapplication.data.repository.OutboundRepoImpl
 import com.example.myapplication.data.repository.ReturnedRepoImpl
+import com.example.myapplication.data.repository.StockRepoImpl
+import com.example.myapplication.domin.repository.StockRepository
 import com.example.myapplication.ui.inbound.AddInboundActivity
 import com.example.myapplication.ui.inbound.InboundActivity
 import com.example.myapplication.ui.payment.PaymentActivity
@@ -57,12 +59,13 @@ class MainActivity : AppCompatActivity() {
 
         // 2. تهيئة الـ Repositories والـ ViewModel
         val customerRepo = CustomerRepoImpl(database.customerDao())
+        val cStockRepo = StockRepoImpl(database.inboundDao(),database.outboundDao(),database.returnedDao(),database.stockDao())
         val outboundRepo = OutboundRepoImpl(database.outboundDao(), database.outboundDetailesDao(), database.stockDao(), database.itemsDao(), database.customerDao())
         val returnedRepo = ReturnedRepoImpl(database, database.returnedDao(), database.returnedDetailsDao(), database.outboundDetailesDao(), database.customerDao(), database.stockDao())
         val iboundRepo = InboundRepositoryImpl( database.inboundDao(), database.inboundDetailesDao(), database.stockDao(), database.suppliedDao(),database.itemsDao())
 
         val syncViewModel: SyncViewModel by viewModels {
-            SyncViewModelFactory(customerRepo, outboundRepo, returnedRepo, userId,iboundRepo)
+            SyncViewModelFactory(customerRepo, outboundRepo, returnedRepo, cStockRepo,userId,iboundRepo)
         }
 
         // 3. مراقبة حالة المزامنة

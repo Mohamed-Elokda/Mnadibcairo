@@ -1,8 +1,7 @@
-package com.example.myapplication.domin.model
+package com.example.myapplication.data.local.entity
 
-
-
-data class Inbound (
+data class InboundWithSupplier(
+    // حقول الـ InboundEntity التي تهمك
     val id:Int,
     val invorseNum:Int,
     val userId: String,

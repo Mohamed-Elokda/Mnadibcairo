@@ -7,12 +7,16 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "Stock")
 data class StockEntity(
     @ColumnInfo(name = "id")
-    @PrimaryKey(true)
-    val id: Int =0,
-    val ItemId: Int=0,
+    @PrimaryKey(autoGenerate = true) // تأكد من استخدام autoGenerate إذا كنت تريد ترقيم تلقائي
+    val id: Int = 0,
+    val ItemId: Int = 0,
     val userId: String,
-    val InitAmount: Int=0,
-    val CurrentAmount: Int=0,
-    val fristDate:String="",
-    val isSynced: Boolean
+    val InitAmount: Int = 0,
+    val CurrentAmount: Int = 0,
+    val fristDate: String = "",
+    val isSynced: Boolean,
+
+    // العمود الجديد لتاريخ التحديث
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: Long = System.currentTimeMillis()
 )

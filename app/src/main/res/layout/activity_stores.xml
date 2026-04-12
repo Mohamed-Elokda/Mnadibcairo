@@ -69,28 +69,16 @@
         android:gravity="center"
         app:layout_constraintTop_toBottomOf="@id/tilSearch">
 
-        <Button
-            android:id="@+id/btnAddProduct"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="منتج جديد"
-            android:layout_marginEnd="8dp"
-            app:icon="@android:drawable/ic_input_add" />
-
-        <Button
-            android:id="@+id/btnAddProductFromExel"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="30dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="استراد"
-            android:layout_marginEnd="8dp"
-            app:icon="@android:drawable/ic_input_add" />
 
     </LinearLayout>
-
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_margin="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/llActions"
+        tools:ignore="MissingClass">
     <!-- Inventory Table -->
     <ScrollView
         android:layout_width="match_parent"
@@ -114,5 +102,5 @@
 
         </TableLayout>
     </ScrollView>
-
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

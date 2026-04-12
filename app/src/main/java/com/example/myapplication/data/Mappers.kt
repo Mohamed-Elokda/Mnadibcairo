@@ -4,6 +4,7 @@ import androidx.room.Embedded
 import com.example.myapplication.data.local.entity.Customer
 import com.example.myapplication.data.local.entity.InboundDetailesEntity
 import com.example.myapplication.data.local.entity.InboundEntity
+import com.example.myapplication.data.local.entity.InboundWithSupplier
 import com.example.myapplication.data.local.entity.ItemsEntity
 import com.example.myapplication.data.local.entity.OutboundDetailesEntity
 import com.example.myapplication.data.local.entity.OutboundEntity
@@ -42,7 +43,7 @@ import com.example.myapplication.domin.model.Transfer
 import com.example.myapplication.domin.model.TransferDetails
 
 // --- تحويل Inbound ---
-fun InboundEntity.toDomain(): Inbound {
+fun InboundWithSupplier.toDomain(): Inbound {
     return Inbound(
         id = this.id,
         userId = this.userId,
@@ -53,8 +54,14 @@ fun InboundEntity.toDomain(): Inbound {
         isSynced = this.isSynced,
         invorseNum = this.invorseNum,
         fromSppliedId = this.fromSppliedId,
-        toSppliedId = this.toSppliedId
+        suppliedName = this.suppliedName,
     )
+}
+
+fun Long.toIsoString(): String {
+    val date = java.util.Date(this)
+    val format = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", java.util.Locale.US)
+    return format.format(date)
 }
 // في ملف PaymentEntity.kt (خارج الكلاس) أو في ملف منفصل
 fun PaymentEntity.toDomainModel(customerName: String): PaymentItem {
@@ -178,6 +185,7 @@ fun StockDto.toEntity(): StockEntity {
         ItemId = this.itemId,
         userId = this.userId, // تأكد أن الحقل في Entity هو String أو Int حسب تصميمك
         CurrentAmount = this.currentAmount.toInt(),
+        InitAmount=this.initAmount.toInt(),
         isSynced = true // القادم من السيرفر يعتبر مزامناً
     )
 }
@@ -193,7 +201,6 @@ fun Inbound.toEntity(): InboundEntity {
         isSynced = this.isSynced,
         invorseNum = this.invorseNum,
         fromSppliedId = this.fromSppliedId,
-        toSppliedId = this.toSppliedId
     )
 }
 // في ملف Outbound.kt (الدومين)
@@ -331,7 +338,7 @@ fun ReturnedDetailsEntity.toDto() = ReturnedDetailsDto(
 fun InboundEntity.toDto(): InboundDto{
     return InboundDto(
         user_id = this.userId,
-        invose_id = this.id,
+        invose_id = this.invorseNum,
         image_url = this.image,
         inbound_date = this.inboundDate.toString().formatToEnglish(),
         latitude = this.latitude,
@@ -339,7 +346,7 @@ fun InboundEntity.toDto(): InboundDto{
         is_synced = this.isSynced,
         id = this.id,
         fromSupplied_id = this.fromSppliedId,
-        toSupplied_id = this.toSppliedId,
+
     )
 }
 // --- تحويل Stock ---
@@ -426,7 +433,6 @@ fun InboundDto.toEntity(): InboundEntity {
         isSynced = true,
         invorseNum = this.invose_id,
         fromSppliedId = this.fromSupplied_id,
-        toSppliedId = this.toSupplied_id,
         image = this.image_url,
         inboundDate = this.inbound_date,
         latitude = this.latitude,

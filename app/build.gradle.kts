@@ -92,6 +92,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt:3.0.1")
     implementation("io.github.jan-tennert.supabase:storage-kt:3.0.1")
     implementation(libs.protolite.well.known.types)
+    implementation(libs.androidx.swiperefreshlayout)
 
     // Ktor required for Supabase
     val ktor_version = "3.0.0"
@@ -140,4 +141,5 @@ dependencies {
     implementation("com.itextpdf:itext7-core:7.2.5")
     implementation("org.apache.poi:poi-ooxml:5.2.3")
     implementation("androidx.print:print:1.0.0")
+    implementation("net.objecthunter:exp4j:0.4.8")
 }

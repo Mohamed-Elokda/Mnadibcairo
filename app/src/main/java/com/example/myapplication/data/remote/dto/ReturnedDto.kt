@@ -9,5 +9,7 @@ data class ReturnedDto(
     val user_id: String,
     val returned_date: String,
     val latitude: Double,
-    val longitude: Double
+    val longitude: Double,
+    val updated_at: Long? = null // ستقوم Supabase بتعبئته تلقائياً عند الجلب
+
 )

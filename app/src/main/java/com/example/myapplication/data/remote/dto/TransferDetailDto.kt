@@ -7,5 +7,7 @@ import kotlinx.serialization.Serializable
 data class TransferDetailDto(
     @SerialName("transfer_id") val transferId: Int,
     @SerialName("item_id") val itemId: Int,
-    val amount: Int
+    val amount: Int,
+    val updated_at: Long? = null // ستقوم Supabase بتعبئته تلقائياً عند الجلب
+
 )

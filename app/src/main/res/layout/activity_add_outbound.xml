@@ -137,11 +137,13 @@
                             android:hint="الكمية"
                             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                             android:layout_marginEnd="4dp">
+
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etQuantity"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:inputType="number" />
+                                android:digits="0123456789.+-*/"
+                                android:inputType="phone" />
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
@@ -178,6 +180,8 @@
                 <TableRow android:background="#E0E0E0" android:padding="10dp">
                     <TextView android:text="الصنف" android:textStyle="bold" android:layout_weight="1"/>
                     <TextView android:text="الكمية" android:textStyle="bold" android:gravity="center" />
+                    <TextView android:text="السعر" android:textStyle="bold" android:gravity="center" />
+
                     <TextView android:text="إجمالي" android:textStyle="bold" android:gravity="center" />
                     <TextView android:text="حذف" android:textStyle="bold" android:gravity="center" android:layout_width="40dp" />                </TableRow>
             </TableLayout>
@@ -188,6 +192,26 @@
                 android:orientation="vertical"
                 android:layout_marginTop="20dp"
                 android:padding="8dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="الرصبد السابق:"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/oldAccount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.00 ج.م"
+                        android:textSize="18sp"
+                        android:textColor="#2E7D32"
+                        android:textStyle="bold"/>
+                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -210,6 +234,7 @@
                         android:textStyle="bold"/>
                 </LinearLayout>
 
+
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -222,6 +247,26 @@
                         android:layout_height="wrap_content"
                         android:inputType="numberDecimal" />
                 </com.google.android.material.textfield.TextInputLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="المبلغ المتبقي:"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/newAccount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.00 ج.م"
+                        android:textSize="18sp"
+                        android:textColor="#2E7D32"
+                        android:textStyle="bold"/>
+                </LinearLayout>
 
             </LinearLayout>
             <Button

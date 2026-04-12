@@ -8,5 +8,7 @@ data class ReturnedDetailsDto(
     val returned_id: Int,
     val item_id: Int,
     val amount: Int,
-    val price: Double
+    val price: Double,
+    val updated_at: String? = null // ستقوم Supabase بتعبئته تلقائياً عند الجلب
+
 )

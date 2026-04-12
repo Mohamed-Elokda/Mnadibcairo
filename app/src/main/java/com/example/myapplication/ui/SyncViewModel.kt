@@ -6,6 +6,7 @@ import com.example.myapplication.data.repository.InboundRepositoryImpl
 import com.example.myapplication.domin.repository.CustomerRepo
 import com.example.myapplication.domin.repository.OutboundRepo
 import com.example.myapplication.domin.repository.ReturnedRepo
+import com.example.myapplication.domin.repository.StockRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,6 +16,7 @@ class SyncViewModel(
     private val customerRepo: CustomerRepo,
     private val outboundRepo: OutboundRepo,
     private val returnedRepo: ReturnedRepo,
+    private val stockRepo: StockRepository,
     private val userId: String,
     private val inbound: InboundRepositoryImpl,
 
@@ -52,10 +54,16 @@ class SyncViewModel(
                 // 4. جلب فواتير المرتجعات
                 _syncStatus.value = SyncState.Progress("جاري تحميل فواتير المرتجعات...")
                 returnedRepo.syncReturnsFromServer(userId)
-                _syncStatus.value = SyncState.Progress("جاري تحميل فواتير  المناقلات...")
+
+
+                _syncStatus.value = SyncState.Progress("جاري تحميل فواتير  الوارد...")
                 inbound.syncInboundFromServer(userId)
-                _syncStatus.value = SyncState.Progress("جاري تحميل بيانات المخازن...")
+
+
+                _syncStatus.value = SyncState.Progress("جاري تحميل بيانات الموردين...")
                 inbound.syncSuppliedFromServer() // استدعاء الدالة الجديدة
+                 _syncStatus.value = SyncState.Progress("جاري تحميل بيانات المخازن...")
+                  stockRepo.syncStockFromServer(userId) // استدعاء الدالة الجديدة
 
                 _syncStatus.value = SyncState.Success("تمت مزامنة كافة البيانات بنجاح!")
             } catch (e: Exception) {
