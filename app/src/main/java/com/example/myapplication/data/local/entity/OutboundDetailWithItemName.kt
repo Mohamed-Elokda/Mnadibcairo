@@ -1,6 +1,7 @@
 package com.example.myapplication.data.local.entity
 
 data class OutboundDetailWithItemName(
+    val id: String,
     val itemId: Long,
     val itemName: String,
     val quantity: Int,

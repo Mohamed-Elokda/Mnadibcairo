@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import com.example.myapplication.data.local.entity.PaymentEntity
+import com.example.myapplication.domin.model.CustomerTotal
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -16,4 +17,7 @@ interface PaymentDao {
 
     @Query("SELECT * FROM payments WHERE customerId = :customerId ORDER BY date ASC")
     fun getPaymentsByCustomer(customerId: Int): Flow<List<PaymentEntity>>
+
+    @Query("SELECT customerId as customerId, SUM(amount) as totalAmount FROM Payments GROUP BY customerId")
+    fun getAllPaymentsTotal(): Flow<List<CustomerTotal>>
 }

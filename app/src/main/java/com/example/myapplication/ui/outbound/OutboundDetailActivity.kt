@@ -1,16 +1,19 @@
 package com.example.myapplication.ui.outbound
 
 import android.R.attr.gravity
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
 import android.widget.*
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import coil.load
 import com.example.myapplication.R
 import com.example.myapplication.data.local.AppDatabase
+import dagger.hilt.android.AndroidEntryPoint
 
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
@@ -18,11 +21,16 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.forEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
+import kotlin.getValue
+@AndroidEntryPoint
 class OutboundDetailActivity : AppCompatActivity() {
 
-    private var photoUrl: String? = null
     private lateinit var mainDetailLayout: androidx.constraintlayout.widget.ConstraintLayout
+    private lateinit var tvFinalRemainingAmount: TextView
+    private  var previousDebt: Double=0.0
+    private  var paidAmount: String=""
+    private val viewModel: OutboundViewModel by viewModels ()
+
     private var currentDetailsList: List<com.example.myapplication.data.local.entity.OutboundDetailWithItemName> = emptyList()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,19 +43,24 @@ class OutboundDetailActivity : AppCompatActivity() {
 
         val tvTotalAmount = findViewById<TextView>(R.id.tvTotalAmount)
         val tvPaidAmount = findViewById<TextView>(R.id.tvPaidAmount)
-        val tvRemainingAmount = findViewById<TextView>(R.id.tvRemainingAmount)
         findViewById<Button>(R.id.btnExportExcel).setOnClickListener { exportToExcel() }
         findViewById<Button>(R.id.btnExportPdf).setOnClickListener { printInvoice() }
         val tableItems = findViewById<TableLayout>(R.id.tableDetailItems)
-        val btnViewPhoto = findViewById<Button>(R.id.btnViewPhoto)
 
         // داخل onCreate في OutboundDetailActivity
         val outboundId = intent.getStringExtra("OUTBOUND_ID")
         val invoiceNum = intent.getStringExtra("INVOICE_NUM")
         val customerName = intent.getStringExtra("CUSTOMER_NAME") // تطابق مع المفتاح الجديد
-        val remoteImageUrl = intent.getStringExtra("IMAGE_URL")
         val date = intent.getStringExtra("DATE")
-        val paidAmount = intent.getStringExtra("PAID_AMOUNT") ?: "0"
+         previousDebt = intent.getDoubleExtra("previousDebt", 0.0)
+
+// تعريف الـ Views الجديدة (تأكد من وجود هذه الـ IDs في ملف XML الذي عدلناه سابقاً)
+        val tvPreviousDebt = findViewById<TextView>(R.id.tvPreviousDebt)
+         tvFinalRemainingAmount = findViewById<TextView>(R.id.tvFinalRemainingAmount)
+
+// تعيين القيم للواجهة
+        tvPreviousDebt.text = String.format("%.2f ج.م", previousDebt)
+       paidAmount = intent.getStringExtra("PAID_AMOUNT") ?: "0"
 
 // تعيين البيانات للواجهة
         tvCustomer.text = "العميل: $customerName"
@@ -55,16 +68,9 @@ class OutboundDetailActivity : AppCompatActivity() {
         tvDate.text = "التاريخ: ${date?.substringBefore(" ")}"
         tvPaidAmount.text = "$paidAmount ج.م"
 
-        btnViewPhoto.setOnClickListener {
-            if (!remoteImageUrl.isNullOrEmpty()) {
-                showImageDialog(remoteImageUrl!!)
-            } else {
-                Toast.makeText(this, "لا توجد صورة لهذه الفاتورة", Toast.LENGTH_SHORT).show()
-            }
-        }
 
         if (outboundId != null) {
-            loadFullData(outboundId)
+           loadFullData(outboundId)
         }
     }
     private fun exportToExcel() {
@@ -88,6 +94,7 @@ class OutboundDetailActivity : AppCompatActivity() {
             row.createCell(1).setCellValue(detail.quantity.toDouble())
             row.createCell(2).setCellValue(detail.price)
             row.createCell(3).setCellValue(detail.quantity * detail.price)
+
         }
 
         val file = java.io.File(getExternalFilesDir(null), "Invoice_${intent.getStringExtra("INVOICE_NUM")}.xlsx")
@@ -174,16 +181,22 @@ class OutboundDetailActivity : AppCompatActivity() {
 
                 // 4. التذييل (Footer) - الإجماليات
                 currentY += 20f
-                val totalAmount = currentDetailsList.sumOf { it.quantity * it.price }
+                val totalInvoiceAmount = currentDetailsList.sumOf { it.quantity * it.price }
                 val paidAmount = intent.getStringExtra("PAID_AMOUNT")?.toDoubleOrNull() ?: 0.0
+                val prevDebt = intent.getDoubleExtra("previousDebt", 0.0)
+                val finalRemaining = intent.getDoubleExtra("totalRemainder", 0.0)
 
                 textPaint.isFakeBoldText = true
-                canvas.drawText("إجمالي القيمة: $totalAmount ج.م", rightMargin, currentY, textPaint)
-                canvas.drawText("المبلغ المدفوع: $paidAmount ج.م", rightMargin, currentY + 25f, textPaint)
+// رسم البيانات
+                canvas.drawText("إجمالي الفاتورة الحالية: $totalInvoiceAmount ج.م", rightMargin, currentY, textPaint)
+                canvas.drawText("رصيد سابق على العميل: $prevDebt ج.م", rightMargin, currentY + 25f, textPaint)
+                canvas.drawText("المبلغ المدفوع الآن: $paidAmount ج.م", rightMargin, currentY + 50f, textPaint)
 
                 paint.color = android.graphics.Color.RED
-                canvas.drawText("المتبقي: ${totalAmount - paidAmount} ج.م", rightMargin, currentY + 50f, textPaint)
+                paint.strokeWidth = 2f
+                canvas.drawLine(40f, currentY + 65f, 550f, currentY + 65f, paint) // خط تمييز للمتبقي النهائي
 
+                canvas.drawText("إجمالي المتبقي النهائي: ${prevDebt+totalInvoiceAmount-prevDebt }} ج.م", rightMargin, currentY + 90f, textPaint)
                 pdfDocument.finishPage(page)
 
                 try {
@@ -200,19 +213,20 @@ class OutboundDetailActivity : AppCompatActivity() {
         printManager.print(jobName, printAdapter, null)
     }
 
+    @SuppressLint("SuspiciousIndentation")
     private fun loadFullData(outboundId: String) {
-        val database = AppDatabase.getDatabase(this)
+
         val table = findViewById<TableLayout>(R.id.tableDetailItems)
 
-        lifecycleScope.launch {
-            // جمع البيانات من الـ Flow
-            database.outboundDetailesDao()
-                .getDetailsByOutboundId(outboundId.toLong())
-                .collect { detailsList ->
 
-                    // الانتقال للخيط الرئيسي لتحديث الواجهة
-                    withContext(Dispatchers.Main) {
-                        currentDetailsList = detailsList
+            // جمع البيانات من الـ Flow
+            viewModel
+               .loadInvoiceDetails(outboundId)
+            viewModel.invoiceDetails.observe(this@OutboundDetailActivity) { detailsList ->
+                currentDetailsList = detailsList
+                detailsList.forEach { it->
+
+
                         // مسح الصفوف القديمة (عدا العنوان)
                         if (table.childCount > 1) {
                             table.removeViews(1, table.childCount - 1)
@@ -240,9 +254,12 @@ class OutboundDetailActivity : AppCompatActivity() {
 
                         // تحديث الإجماليات
                         findViewById<TextView>(R.id.tvTotalAmount).text = "الإجمالي: $totalInvoice ج.م"
-                        val paid = intent.getStringExtra("PAID_AMOUNT")?.toDoubleOrNull() ?: 0.0
-                        findViewById<TextView>(R.id.tvRemainingAmount).text = "المتبقي: ${totalInvoice - paid} ج.م"
-                    }
+                        tvFinalRemainingAmount.text=(totalInvoice+previousDebt-paidAmount.toDouble()).toString()
+
+
+
+
+                    // الانتقال للخيط الرئيسي لتحديث الواجهة
                 }
         }
     }

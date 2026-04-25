@@ -6,5 +6,7 @@ data class StockWithItemName(
     val itemName: String, // الاسم اللي جاي من الـ Join
     val userId: String, // الاسم اللي جاي من الـ Join
     val CurrentAmount: Int,
-    val fristDate: String
-)
+    val fristDate: String,
+    val InitAmount: Int = 0,
+
+    )

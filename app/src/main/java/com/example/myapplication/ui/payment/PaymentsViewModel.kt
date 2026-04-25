@@ -3,14 +3,24 @@ package com.example.myapplication.ui.payment
 import android.content.Context
 import androidx.lifecycle.*
 import com.example.myapplication.data.local.Prefs
+import com.example.myapplication.domin.model.CustomerModel
 import com.example.myapplication.domin.model.PaymentItem
+import com.example.myapplication.domin.model.PaymentMethod
 import com.example.myapplication.domin.model.Resource
 import com.example.myapplication.domin.repository.CustomerRepo
 import com.example.myapplication.domin.repository.PaymentRepository
+import com.example.myapplication.domin.useCase.CollectPaymentUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-class PaymentsViewModel(private val repository: PaymentRepository,    private val customerRepo: CustomerRepo
+import javax.inject.Inject
+@HiltViewModel
+class PaymentsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val repository: PaymentRepository,
+    private val collectPaymentUseCase: CollectPaymentUseCase,
+    private val customerRepo: CustomerRepo
 ) : ViewModel() {
 
     // قائمة التوريدات الأصلية
@@ -23,7 +33,7 @@ class PaymentsViewModel(private val repository: PaymentRepository,    private va
     // حالة حفظ التوريد الجديد
     private val _saveStatus = MutableLiveData<Resource<String>>()
     val saveStatus: LiveData<Resource<String>> get() = _saveStatus
-    fun allCustomers(context: Context): LiveData<List<com.example.myapplication.domin.model.Customer>> {
+    fun allCustomers(context: Context): LiveData<List<CustomerModel>> {
         return customerRepo.getAllCustomers(Prefs.getUserId(context)?:"").asLiveData() // افترضنا userId = 1
 
     }
@@ -50,13 +60,18 @@ class PaymentsViewModel(private val repository: PaymentRepository,    private va
     }
 
     // 3. حفظ توريد جديد وتعديل حساب العميل
-    fun savePayment(customerId: Int, amount: Double, type: String) {
+
+    fun savePayment(customerId: Int, amount: Double, type: String, method: PaymentMethod,notes: String) {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // تنفيذ العملية في الـ Repository (حفظ التوريد + خصم من مديونية العميل)
-                val success = repository.processPaymentAndUpdateBalance(customerId, amount, type)
-
+                val success = repository.processPaymentAndUpdateBalance(customerId, amount, type,notes)
+                collectPaymentUseCase(
+                    amount = amount,
+                    method = method,
+                    notes = notes,
+                )
                 if (success) {
                     loadPayments() // تحديث القائمة بعد الحفظ
                     _saveStatus.postValue(Resource.Success("تم تسجيل التوريد وتحديث الحساب"))

@@ -1,9 +1,11 @@
 package com.example.myapplication.data.repository
 
 import android.util.Log
+import androidx.room.Transaction
 import androidx.room.withTransaction
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.dao.CustomerDao
+import com.example.myapplication.data.local.dao.ItemsDao
 import com.example.myapplication.data.local.dao.OutboundDetailesDao
 import com.example.myapplication.data.local.dao.ReturnedDao
 import com.example.myapplication.data.local.dao.ReturnedDetailsDao
@@ -11,9 +13,11 @@ import com.example.myapplication.data.local.dao.StockDao
 import com.example.myapplication.data.local.entity.ItemHistoryProjection
 import com.example.myapplication.data.local.entity.ItemsEntity
 import com.example.myapplication.data.local.entity.ReturnedDetailsEntity
+import com.example.myapplication.data.local.entity.ReturnedEntity
 import com.example.myapplication.data.local.entity.ReturnedWithNames
+import com.example.myapplication.data.remote.dto.InboundDetailsDto
+import com.example.myapplication.data.remote.dto.ReturnedDetailsDto
 import com.example.myapplication.data.remote.dto.ReturnedDto
-import com.example.myapplication.data.remote.manager.supabase
 import com.example.myapplication.data.toDto
 import com.example.myapplication.data.toEntity
 import com.example.myapplication.data.toReturnedDetailsModel
@@ -23,16 +27,22 @@ import com.example.myapplication.domin.model.ReturnedDetailsModel
 import com.example.myapplication.domin.model.ReturnedModel
 import com.example.myapplication.domin.model.ReturnedWithNameModel
 import com.example.myapplication.domin.repository.ReturnedRepo
+import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
-class ReturnedRepoImpl(private val database: AppDatabase, // نحتاجه للـ Transaction
-                       private val returnedDao: ReturnedDao,
-                       private val returnedDetailsDao: ReturnedDetailsDao,
-                       private val outboundDetailsDao: OutboundDetailesDao, // تأكد من إضافة الاستعلامات فيه
-                       private val customerDao: CustomerDao,
-                       private val stockDao: StockDao ):
+class ReturnedRepoImpl @Inject constructor(private val database: AppDatabase, // نحتاجه للـ Transaction
+                                           private val supabase: SupabaseClient,
+                                           private val returnedDao: ReturnedDao,
+                                           private val returnedDetailsDao: ReturnedDetailsDao,
+                                           private val outboundDetailsDao: OutboundDetailesDao, // تأكد من إضافة الاستعلامات فيه
+                                           private val customerDao: CustomerDao,
+                                           private val itemDao: ItemsDao,
+
+                                           private val stockDao: StockDao ):
     ReturnedRepo {
     override suspend fun insertReturned(
         returnedModel: ReturnedModel,
@@ -45,15 +55,15 @@ class ReturnedRepoImpl(private val database: AppDatabase, // نحتاجه للـ
         database.withTransaction {
 
             // 1. حفظ رأس الفاتورة (ReturnedEntity)
-            val returnedId = returnedDao.insert(returnedModel.toReturnedEntity())
+            returnedDao.insert(returnedModel.toReturnedEntity())
 
             // 2. معالجة الأصناف المرتجعة صنفاً صنفاً
             returnedDetails.forEach { detailModel ->
 
                 // أ- حفظ تفاصيل المرتجع
                 val detailsEntity = ReturnedDetailsEntity(
-                    id = 0, // تلقائي
-                    returnedId = returnedId.toInt(),
+                    id = java.util.UUID.randomUUID().toString(), // تلقائي
+                    returnedId = returnedModel.id,
                     itemId = detailModel.itemId,
                     amount = detailModel.amount,
                     price = detailModel.price // يمكنك تمرير السعر إذا كان مخزناً في الموديل
@@ -80,7 +90,7 @@ class ReturnedRepoImpl(private val database: AppDatabase, // نحتاجه للـ
             }
         }
     }
-    override suspend fun getAllReturnedDetailsByReturnedId(returnedId: Int): Flow<List<ReturnedDetailsModel>> {
+    override suspend fun getAllReturnedDetailsByReturnedId(returnedId: String): Flow<List<ReturnedDetailsModel>> {
         return returnedDetailsDao.getAllReturnedDetails(returnedId).map { it->
             it.map { item->
                 item.toReturnedDetailsModel()
@@ -91,7 +101,7 @@ class ReturnedRepoImpl(private val database: AppDatabase, // نحتاجه للـ
     }
 
     // داخل ReturnedRepoImpl
-    override fun getAllReturnedDetails(returnedId: Int): Flow<List<ReturnedDetailsModel>> {
+    override fun getAllReturnedDetails(returnedId: String): Flow<List<ReturnedDetailsModel>> {
         return returnedDetailsDao.getDetailsByReturnedId(returnedId).map { list ->
             list.map { item ->
                 ReturnedDetailsModel(
@@ -140,22 +150,106 @@ class ReturnedRepoImpl(private val database: AppDatabase, // نحتاجه للـ
         }
     }
     // داخل ReturnedRepoImpl.kt
+
     override suspend fun syncReturnsFromServer(userId: String) {
         try {
+            // 1. جلب كل المرتجعات الخاصة بالمستخدم من السيرفر
             val remoteReturns = supabase.from("returned")
                 .select { filter { eq("user_id", userId) } }
                 .decodeList<ReturnedDto>()
 
-            if (remoteReturns.isNotEmpty()) {
-                val entities = remoteReturns.map { it.toEntity() }
-                returnedDao.insertReturnsList(entities) // تأكد من وجود هذه الدالة في الـ DAO
+            remoteReturns.forEach { remoteDto ->
+                // 2. جلب النسخة المحلية (لو موجودة) للتأكد من حالة التحديث
+
+                // 3. شرط التحديث:
+                // - الفاتورة مش موجودة أصلاً محلياً
+                // - أو نسخة السيرفر أحدث من النسخة اللي عندي (بناءً على updatedAt)
+
+
+                    // حفظ الرأس (Header) وتأكيد المزامنة
+                    returnedDao.insert(remoteDto.toEntity().copy(isSynced = true))
+
+                    // 4. جلب التفاصيل الخاصة بهذه الفاتورة تحديداً
+                    // ملحوظة: تأكد من اسم العمود في السيرفر (returned_id أو return_id)
+                val currentReturnId = remoteDto.id ?: return@forEach
+
+// 2. جلب التفاصيل باستخدام الـ ID الخاص بالفاتورة الحالية فقط
+                val details = supabase.from("returned_details")
+                    .select {
+                        filter {
+                            // استخدم eq مع رقم واحد (currentReturnId) وليس مع القائمة كاملة
+                            eq("returned_id", currentReturnId)
+                        }
+                    }
+                    .decodeList<ReturnedDetailsDto>()
+
+                    if (details.isNotEmpty()) {
+                        // تحويل الـ DTOs لـ Entities وحفظها
+                        returnedDetailsDao.insertReturnedDetailsList(
+                            details.map { it.toEntity() }
+                        )
+                    }
+                    Log.d("Sync", "تم تحديث الفاتورة رقم ${remoteDto.id} وتفاصيلها")
+
             }
         } catch (e: Exception) {
-            Log.e("Sync", "Error fetching returns: ${e.message}")
+            Log.e("Sync", "خطأ في مزامنة المرتجعات: ${e.message}")
         }
     }
-    override fun getItemsByCustomer(customerId: Int): Flow<List<ItemsEntity>> {
-        return outboundDetailsDao.getItemsBoughtByCustomer(customerId)
+
+    override suspend fun deleteReturned(returned:  ReturnedWithNameModel) {
+        returnedDao.delete(returned.returnedModel.toEntity())
+        returnedDetailsDao.deleteReturnedDetails(returned.returnedModel.id)
+    }
+
+    override fun getItemsByCustomer(): Flow<List<ItemsEntity>> {
+        return itemDao.getAllItems()
+    }
+
+    @Transaction
+    override suspend fun updateReturned(returned: ReturnedModel, details: List<ReturnedDetailsModel>, newDebtAmount: Double) {
+        // 1. جلب بيانات المرتجع القديم (قبل التعديل) لمعرفة العميل القديم والمبلغ القديم
+        val oldReturnedHeader = returnedDao.getReturnedByIdStatic(returned.id)
+        val oldDetails = returnedDetailsDao.getReturnedDetailsStatic(returned.id)
+
+        // حساب إجمالي المرتجع القديم
+        val oldTotalAmount = oldDetails.sumOf { it.amount * it.price }
+
+        // ==========================================
+        // الخطوة 1: إلغاء أثر المرتجع القديم تماماً
+        // ==========================================
+
+        // أ- خصم الكميات من المخزن (لأن المرتجع كان زودها)
+        oldDetails.forEach { old ->
+            stockDao.reduceStock(old.itemId, old.amount)
+        }
+
+        // ب- تعديل مديونية العميل القديم (نطرح منه قيمة المرتجع القديم ليرجع حسابه كما كان)
+        // ملاحظة: المرتجع بيقلل المديونية، فعشان نلغيه لازم "نزود" المديونية تاني بالفرق
+        customerDao.updateCustomerDebt(oldReturnedHeader.customerId, -oldTotalAmount)
+
+        // ==========================================
+        // الخطوة 2: تطبيق بيانات المرتجع الجديد
+        // ==========================================
+
+        // أ- حذف التفاصيل القديمة من قاعدة البيانات
+        returnedDetailsDao.deleteReturnedDetails(returned.id)
+
+        // ب- زيادة المخزن بالكميات الجديدة
+        details.forEach { new ->
+            stockDao.updateStockQuantity(new.itemId, new.amount)
+        }
+
+        // ج- إضافة التفاصيل الجديدة
+        val detailsEntities = details.map { it.toEntity(returned.id) }
+        returnedDetailsDao.insertReturnedDetails(detailsEntities)
+
+        // د- تحديث حساب العميل الجديد (إضافة قيمة المرتجع الجديد لميزانه)
+        // المديونية بتقل بقيمة المرتجع الجديد
+        val newTotalAmount = details.sumOf { it.amount * it.price }
+        customerDao.updateCustomerDebt(returned.customerId, newTotalAmount)
+
+        returnedDao.update(returned.toEntity())
     }
 
     override suspend fun getLastPrice(customerId: Int, itemId: Int): Double? {

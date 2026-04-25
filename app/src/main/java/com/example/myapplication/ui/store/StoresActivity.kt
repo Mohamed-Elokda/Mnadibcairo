@@ -5,70 +5,56 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
+import android.view.animation.AnimationUtils
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.myapplication.R
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.repository.InboundRepositoryImpl
 import com.example.myapplication.data.repository.StockRepoImpl
 import com.example.myapplication.domin.model.Items
 import com.example.myapplication.domin.model.Stock
-import com.example.myapplication.domin.useCase.AddInboundUseCase
-import com.example.myapplication.domin.useCase.GetInboundDetailsUseCase
+import com.example.myapplication.domin.useCase.inboundUseCases.AddInboundUseCase
+import com.example.myapplication.domin.useCase.inboundUseCases.GetInboundDetailsUseCase
 import com.example.myapplication.domin.useCase.GetStockFromServer
 import com.example.myapplication.domin.useCase.GetStockUseCase
 import com.example.myapplication.ui.inbound.InboundViewModel
-import com.example.myapplication.ui.inbound.InboundViewModelFactory
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.apache.poi.ss.usermodel.WorkbookFactory
 
+@AndroidEntryPoint
 class StoresActivity : AppCompatActivity() {
 
-    private lateinit var tableInventory: TableLayout
-    private lateinit var swipeRefresh: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+
     // لانشر اختيار ملف الإكسيل
-    private val excelPickerLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { readExcelFile(it) }
-    }
+    private val excelPickerLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            uri?.let { readExcelFile(it) }
+        }
+    private lateinit var etSearch: EditText
+    private lateinit var tvTotalItems: TextView
+    private lateinit var tvTotalStock: TextView
+    private lateinit var adapter: InventoryAdapter
 
     // ViewModel الخاص بالاستيراد (Inbound)
-    private val inboundViewModel: InboundViewModel by viewModels {
-        val database = AppDatabase.getDatabase(this)
-        val repo = InboundRepositoryImpl(
-            database.inboundDao(),
-            database.inboundDetailesDao(),
-            database.stockDao(),
-            database.suppliedDao(),
-            database.itemsDao()
-        )
-        val getInboundDetailsUseCase = GetInboundDetailsUseCase(repo)
-        InboundViewModelFactory(AddInboundUseCase(repo),getInboundDetailsUseCase, repo)
-    }
+    private val inboundViewModel: InboundViewModel by viewModels()
+    private lateinit var items: List<Stock>
 
     // ViewModel الخاص بعرض المخزن (Store)
     // داخل StoresActivity.kt
-    private val storeViewModel: StoreViewModel by viewModels {
-        val database = AppDatabase.getDatabase(this)
-        val repo = StockRepoImpl(
-            database.inboundDao(),
-            database.outboundDao(),
-            database.returnedDao(),
-            database.stockDao()
-        )
-        val getStockUseCase = GetStockUseCase(repo)
-        val getStockFromServer = GetStockFromServer(repo)
-
-        // نمرر الـ Context للـ Factory فقط وليس للـ ViewModel
-        StoreViewModelFactory(this, getStockUseCase, getStockFromServer)
-    }
+    private val storeViewModel: StoreViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,27 +62,27 @@ class StoresActivity : AppCompatActivity() {
 
         initViews()
         setupObservers()
+        etSearch.addTextChangedListener { text ->
+            val filteredList = items.filter {
+                it.itemName.contains(text.toString(), ignoreCase = true)
+            }
+            adapter.updateList(filteredList)
+
+            // تحديث إحصائيات البحث (اختياري)
+        }
     }
 
     private fun initViews() {
-        tableInventory = findViewById(R.id.tableInventory)
-        swipeRefresh = findViewById(R.id.swipeRefresh)
+        etSearch = findViewById(R.id.etSearch)
+        tvTotalItems = findViewById(R.id.tvTotalItems)
+        tvTotalStock = findViewById(R.id.tvTotalStock)
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener { finish() }
 
-        swipeRefresh.setOnRefreshListener {
-            storeViewModel.refreshStock()
-        }
 
     }
 
     private fun setupObservers() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                storeViewModel.isRefreshing.collect { refreshing ->
-                    swipeRefresh.isRefreshing = refreshing
-                }
-            }
-        }
+
         // مراقبة حالة المخزن وعرضها في الجدول
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -105,12 +91,17 @@ class StoresActivity : AppCompatActivity() {
                         is StoreState.Loading -> {
                             // يمكنك إضافة ProgressBar هنا لاحقاً
                         }
+
                         is StoreState.Success -> {
                             displayStockData(state.items)
+                            items = state.items
                         }
+
                         is StoreState.Error -> {
-                            Toast.makeText(this@StoresActivity, state.message, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@StoresActivity, state.message, Toast.LENGTH_SHORT)
+                                .show()
                         }
+
                         else -> {}
                     }
                 }
@@ -118,42 +109,46 @@ class StoresActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupRecyclerView(stockList: List<Stock>) {
+        val recyclerView = findViewById<RecyclerView>(R.id.rvInventory)
+        adapter = InventoryAdapter(stockList, {
+            val intent = Intent(this, StockMovementActivity::class.java).apply {
+                // نرسل الـ ID والاسم للشاشة التالية
+                putExtra("ITEM_ID", it.ItemId)
+                putExtra("ITEM_NAME", it.itemName)
+            }
+            startActivity(intent)
+        })
+
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = adapter
+
+        // تفعيل الأنيميشن برمجياً
+        val resId = R.anim.layout_animation_fall_down
+        val animation = AnimationUtils.loadLayoutAnimation(this, resId)
+        recyclerView.layoutAnimation = animation
+
+        // لإعادة تشغيل الأنيميشن عند تحديث البيانات
+        recyclerView.scheduleLayoutAnimation()
+    }
+
     private fun displayStockData(stockList: List<Stock>) {
         // تنظيف الجدول من البيانات القديمة مع الإبقاء على الهيدر (الصف الأول)
-        if (tableInventory.childCount > 1) {
-            tableInventory.removeViews(1, tableInventory.childCount - 1)
+
+
+        setupRecyclerView(stockList)
+        tvTotalItems.text = stockList.size.toString()
+        var sum: Int = 0
+        stockList.forEach {
+            sum += it.InitAmount
         }
+        tvTotalStock.text = sum.toString()
+        // إضافة الأعمدة
 
-        for (stock in stockList) {
-            val row = TableRow(this).apply {
-                setPadding(0, 16, 0, 16)
-                // جعل الصف قابل للنقر
-                isClickable = true
-                isFocusable = true
-                // إضافة خلفية تعطي تأثير عند الضغط (Ripple Effect)
-                val outValue = android.util.TypedValue()
-                theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
-                setBackgroundResource(outValue.resourceId)
-            }
 
-            // إضافة الأعمدة
-            row.addView(createTextView(stock.itemName))
-            row.addView(createTextView(stock.CurrentAmount.toString(), isBold = true))
-            row.addView(createTextView(stock.fristDate))
+    }
 
-            // --- التعديل هنا: عند الضغط على الصف ---
-            row.setOnClickListener {
-                val intent = Intent(this, StockMovementActivity::class.java).apply {
-                    // نرسل الـ ID والاسم للشاشة التالية
-                    putExtra("ITEM_ID", stock.ItemId)
-                    putExtra("ITEM_NAME", stock.itemName)
-                }
-                startActivity(intent)
-            }
-
-            tableInventory.addView(row)
-        }
-    }    private fun createTextView(txt: String, isBold: Boolean = false): TextView {
+    private fun createTextView(txt: String, isBold: Boolean = false): TextView {
         return TextView(this).apply {
             text = txt
             gravity = Gravity.CENTER
@@ -188,13 +183,19 @@ class StoresActivity : AppCompatActivity() {
                 if (itemsToInsert.isNotEmpty()) {
                     inboundViewModel.importBulkItems(itemsToInsert)
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@StoresActivity, "تم استيراد ${itemsToInsert.size} صنف بنجاح", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this@StoresActivity,
+                            "تم استيراد ${itemsToInsert.size} صنف بنجاح",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
                 workbook.close()
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@StoresActivity, "خطأ في الملف: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@StoresActivity, "خطأ في الملف: ${e.message}", Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }

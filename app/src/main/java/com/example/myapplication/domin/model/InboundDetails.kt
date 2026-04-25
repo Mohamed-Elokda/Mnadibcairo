@@ -4,11 +4,12 @@ package com.example.myapplication.domin.model
 
 data class InboundDetails (
 
-    val id: Int,
-    val InboundId:Int,
+    val id: String,
+    val InboundId: String,
     val ItemId: Int,
-    val amount:Int,
-    val userId: String
+    var amount:Int,
+    val userId: String,
+    val updated_at: Long
 
 ) {
 }

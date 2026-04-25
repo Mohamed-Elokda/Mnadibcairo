@@ -12,7 +12,7 @@ import com.example.myapplication.R
 import com.example.myapplication.domin.model.ReturnedModel
 import com.example.myapplication.domin.model.ReturnedWithNameModel
 
-class ReturnedAdapter(private val onItemClick: (ReturnedWithNameModel) -> Unit) :
+class ReturnedAdapter(private val onItemClick: (ReturnedWithNameModel) -> Unit,private val onLongClick: (ReturnedWithNameModel) -> Unit ):
     ListAdapter<ReturnedWithNameModel, ReturnedAdapter.ReturnedViewHolder>(ReturnedDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ReturnedViewHolder {
@@ -41,6 +41,8 @@ class ReturnedAdapter(private val onItemClick: (ReturnedWithNameModel) -> Unit) 
 
 
             itemView.setOnClickListener { onItemClick(item) }
+            itemView.setOnLongClickListener { onLongClick(item)
+                true }
         }
     }
 

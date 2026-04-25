@@ -1,11 +1,12 @@
-package com.example.myapplication.domin.useCase
+package com.example.myapplication.domin.useCase.inboundUseCases
 
 import com.example.myapplication.domin.model.Inbound
 import com.example.myapplication.domin.model.InboundDetails
 import com.example.myapplication.domin.repository.IInboundRepository
+import javax.inject.Inject
 
 // AddInboundUseCase.kt
-class AddInboundUseCase(private val repository: IInboundRepository) {
+class AddInboundUseCase @Inject constructor(private val repository: IInboundRepository) {
     suspend operator fun invoke(inbound: Inbound, details: List<InboundDetails>): Result<Unit> {
         // التحقق من الأصناف
         for (item in details) {

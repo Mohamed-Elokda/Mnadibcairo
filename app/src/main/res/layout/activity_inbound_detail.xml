@@ -7,6 +7,7 @@
     android:padding="16dp"
     android:layoutDirection="rtl"
     android:background="#F8F9FA"
+    android:id="@+id/mainadID"
     tools:context=".ui.inbound.InboundDetailActivity">
 
     <TextView
@@ -66,6 +67,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         app:cardCornerRadius="8dp"
+        app:cardBackgroundColor="@color/white"
         app:cardElevation="2dp"
         app:layout_constraintTop_toBottomOf="@id/layoutExportButtons">
 
@@ -115,18 +117,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:cardElevation="4dp"
-        app:layout_constraintBottom_toTopOf="@id/btnViewPhoto">
+        app:layout_constraintBottom_toBottomOf="parent">
 
 
     </com.google.android.material.card.MaterialCardView>
 
-    <Button
-        android:id="@+id/btnViewPhoto"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="عرض صورة الفاتورة المرفقة"
-        app:icon="@android:drawable/ic_menu_gallery"
-        app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -2,13 +2,15 @@ package com.example.myapplication.domin.model
 
 
 
-data class Customer(
+data class CustomerModel(
     val id: Int,
     val customerName: String,
     val userId: String,
-    val CustomerNum: Int,
+    val customerNum: Int,
 
-    val customerDebt: Double
+    val customerDebt: Double,
+    val firstCustomerDebt: Double,
+    val updatedAt: Long,
 
 ){
     override fun toString(): String {

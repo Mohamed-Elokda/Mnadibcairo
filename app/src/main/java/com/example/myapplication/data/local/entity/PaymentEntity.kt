@@ -11,6 +11,8 @@ data class PaymentEntity(
     val amount: Double,
     val paymentType: String,
     val date: String,
+    val notes: String,
+
     @ColumnInfo(name = "updated_at")
     val updatedAt: Long = System.currentTimeMillis()
 )

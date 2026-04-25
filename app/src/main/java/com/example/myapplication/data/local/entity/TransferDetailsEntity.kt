@@ -6,9 +6,9 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "TransferDetails")
 data class TransferDetailsEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
-    val transferId: Int,       // ربط مع الجدول الرئيسي
+    @PrimaryKey()
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val transferId: String,       // ربط مع الجدول الرئيسي
     val itemId: Int,
     val amount: Int,
     @ColumnInfo(name = "updated_at")

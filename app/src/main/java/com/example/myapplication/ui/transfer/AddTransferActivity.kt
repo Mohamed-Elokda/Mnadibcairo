@@ -18,23 +18,20 @@ import com.example.myapplication.data.repository.InboundRepositoryImpl
 import com.example.myapplication.data.repository.TransferRepositoryImpl
 import com.example.myapplication.domin.repository.IInboundRepository
 import com.example.myapplication.domin.useCase.AddTransferUseCase
+import dagger.hilt.android.AndroidEntryPoint
+import java.time.LocalDate
 
+@AndroidEntryPoint
 class AddTransferActivity : AppCompatActivity() {
 
-    private val viewModel: TransferViewModel by viewModels {
-        val appData= AppDatabase.getDatabase(this)
-val iInboundRepository: IInboundRepository= InboundRepositoryImpl(appData.inboundDao(),appData.inboundDetailesDao(),appData.stockDao(),appData.suppliedDao(),appData.itemsDao())
-val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.stockDao())
-        val addTransferUseCase= AddTransferUseCase(transferRepository)
-        TransferViewModelFactory(transferRepository,iInboundRepository,addTransferUseCase)
-    }
+    private val viewModel: TransferViewModel by viewModels ()
 
     // قائمة مؤقتة للأصناف المضافة للفاتورة
     private val transferItemsList = mutableListOf<TransferDetails>()
 
     // المتغيرات المختارة
     private var selectedToStoreId: Int = -1
-    private var selectedItemId: Int = -1
+    private var selectedItem: Items? = null
     private var userStoreId: Int = -1
 
     // عناصر الواجهة
@@ -45,7 +42,8 @@ val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.sto
     private lateinit var etInvoiceNumber: EditText
     private lateinit var btnAddItem: Button
     private lateinit var btnSave: Button
-
+    private var isEditMode = false
+    private var editTransferId = -1
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -54,6 +52,14 @@ val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.sto
         initViews()
         setupObservers()
 
+
+// جوه onCreate
+        isEditMode = intent.getBooleanExtra("IS_EDIT_MODE", false)
+        if (isEditMode) {
+            editTransferId = intent.getIntExtra("TRANSFER_ID", -1)
+//            loadTransferDataForEdit(editTransferId)
+            btnSave.text = "تحديث المناقلة" // نغير اسم الزرار عشان يبقى منطقي
+        }
         // زر إضافة صنف للقائمة (الجدول)
         btnAddItem.setOnClickListener {
             addItemToTable()
@@ -75,7 +81,20 @@ val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.sto
         btnSave = findViewById(R.id.btnSave)
     }
 
-
+//    private fun loadTransferDataForEdit(id: Int) {
+//        viewModel.getTransferById(id).observe(this) { transfer ->
+//            etInvoiceNumber.setText(transfer.transferNum.toString())
+//            // هنا هتحتاج تعمل Logic عشان تختار المخزن الصح في الـ AutoComplete
+//        }
+//
+//        viewModel.loadTransferDetails(id).observe(this) { details ->
+//            // هنا تلف على التفاصيل وتضيفها للـ transferItemsList وللـ tableItems
+//            details.forEach { detail ->
+//                // نستخدم نفس الدالة اللي عملناها قبل كدة لإضافة الصفوف
+//                addExistingItemToTable(detail)
+//            }
+//        }
+//    }
 
     private fun setupObservers() {
         // مراقبة قائمة المخازن (الوجهة)
@@ -88,11 +107,17 @@ val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.sto
         }
 
         // مراقبة قائمة الأصناف
+        // مراقبة قائمة الأصناف
         viewModel.allItems.observe(this) { itemsList ->
+            // الأديبتر بياخد Strings بس عشان يعرض الأسماء
             val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, itemsList.map { it.itemName })
             autoItem.setAdapter(adapter)
+
             autoItem.setOnItemClickListener { _, _, position, _ ->
-                selectedItemId = itemsList[position].id
+                // بدل الـ Cast، بنجيب الكائن من القائمة الأصلية باستخدام الترتيب (position)
+
+                 val selectedName = adapter.getItem(position)
+                 selectedItem = itemsList.find { it.itemName == selectedName }
             }
         }
 
@@ -107,7 +132,7 @@ val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.sto
         val qtyStr = etQuantity.text.toString()
         val itemName = autoItem.text.toString()
 
-        if (selectedItemId == -1 || qtyStr.isEmpty()) {
+        if (selectedItem == null || qtyStr.isEmpty()) {
             Toast.makeText(this, "يرجى اختيار صنف وتحديد الكمية", Toast.LENGTH_SHORT).show()
             return
         }
@@ -116,7 +141,7 @@ val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.sto
         val userId = Prefs.getUserId(this) ?: ""
 
         // إضافة للـ List البرمجية
-        transferItemsList.add(TransferDetails(id = 0, transferId = 0, itemId = selectedItemId, amount = qty))
+        transferItemsList.add(TransferDetails(id = java.util.UUID.randomUUID().toString(), transferId = "", itemId = selectedItem!!.id, amount = qty))
 
         // إضافة للـ TableLayout (الواجهة)
         val row = TableRow(this)
@@ -129,7 +154,7 @@ val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.sto
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
             setOnClickListener {
                 tableItems.removeView(row)
-                transferItemsList.removeAll { it.itemId == selectedItemId && it.amount == qty }
+                transferItemsList.removeAll { it.itemId == selectedItem!!.id && it.amount == qty }
             }
         }
 
@@ -141,7 +166,7 @@ val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.sto
         // تصفية الحقول للإضافة التالية
         autoItem.text.clear()
         etQuantity.text.clear()
-        selectedItemId = -1
+        selectedItem = null
     }
 
     private fun saveTransferInvoice() {
@@ -158,11 +183,11 @@ val transferRepository= TransferRepositoryImpl(appData.transferDao(),appData.sto
         }
 
         val transfer = Transfer(
-            id = 0,
+            id = java.util.UUID.randomUUID().toString(),
             transferNum = invoiceNum.toInt(),
-            fromStoreId = userStoreId,
+            fromStoreId = Prefs.getUserId(this@AddTransferActivity)?:"",
             toStoreId = selectedToStoreId,
-            date = "2026-03-30", // يفضل جلب التاريخ الحالي برمجياً
+            date = LocalDate.now().toString(), // يفضل جلب التاريخ الحالي برمجياً
             userId = Prefs.getUserId(this) ?: "",
             isSynced = false
         )

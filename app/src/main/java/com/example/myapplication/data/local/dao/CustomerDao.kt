@@ -24,6 +24,9 @@ interface CustomerDao {
     @Query("SELECT * FROM Customer WHERE isSync = 0")
     suspend fun getUnsyncedCustomers(): List<Customer>
 
+    @Query("SELECT * FROM Customer WHERE id = :customerId")
+    fun getCustomerById(customerId: Int): Flow<Customer?>
+
     @Query("""
     SELECT date, description, amountIn, amountOut FROM (
         -- 1. المبيعات (Outbound)

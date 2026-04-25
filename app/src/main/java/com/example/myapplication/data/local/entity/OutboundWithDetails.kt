@@ -9,5 +9,6 @@ data class OutboundWithDetails(
         parentColumn = "id",
         entityColumn = "outboundId"
     )
-    val details: List<OutboundDetailesEntity>
+       val details: List<OutboundDetailesEntity>
+
 )

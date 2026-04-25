@@ -3,242 +3,321 @@ package com.example.myapplication.ui.returned
 import android.annotation.SuppressLint
 import android.graphics.Color
 import android.os.Bundle
+import android.text.Editable
+import android.text.InputType
+import android.text.TextWatcher
 import android.view.Gravity
+import android.view.View
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.R
-import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.Prefs
 import com.example.myapplication.data.local.entity.ItemsEntity
-import com.example.myapplication.data.repository.CustomerRepoImpl
-import com.example.myapplication.data.repository.ReturnedRepoImpl
-import com.example.myapplication.domin.model.Customer
+import com.example.myapplication.domin.model.CustomerModel
 import com.example.myapplication.domin.model.ReturnedDetailsModel
 import com.example.myapplication.domin.model.ReturnedModel
-import com.example.myapplication.domin.repository.ReturnedRepo
-import com.example.myapplication.domin.useCase.AddReturnedUseCase
-import com.example.myapplication.domin.useCase.GetAllCustomersUseCase
-import com.example.myapplication.domin.useCase.GetAllReturnedUseCase
-import com.example.myapplication.domin.useCase.GetCustomerItemsUseCase
-import com.example.myapplication.domin.useCase.GetItemHistoryUseCase
-import com.example.myapplication.domin.useCase.GetLastPriceUseCase
-import com.example.myapplication.domin.useCase.GetReturnedDetailsUseCase
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
+@AndroidEntryPoint
 class AddReturnedActivity : AppCompatActivity() {
 
     private val tempItemsList = mutableListOf<ReturnedDetailsModel>()
     private var totalInvoiceAmount = 0.0
+    private var currentReturnedId: String = "" // لتخزين ID الفاتورة في حالة التعديل
 
-    // تعريف المتغيرات على مستوى الكلاس
     private lateinit var autoCustomer: AutoCompleteTextView
     private lateinit var autoItem: AutoCompleteTextView
     private lateinit var etQuantity: EditText
     private lateinit var etSellingPrice: EditText
     private lateinit var tvTotalInvoice: TextView
     private lateinit var tableItems: TableLayout
+    private lateinit var btnSave: Button
 
     private lateinit var customerAdapter: ArrayAdapter<String>
     private lateinit var itemAdapter: ArrayAdapter<String>
 
-    private var currentCustomers = listOf<Customer>()
+    private var currentCustomerModels = listOf<CustomerModel>()
     private var currentItems = listOf<ItemsEntity>()
     private var selectedCustomerId: Int = -1
 
-    private val viewModel: ReturnedViewModel by viewModels {
-        val database = AppDatabase.getDatabase(this)
-        val repository = ReturnedRepoImpl(
-            database,
-            database.returnedDao(),
-            database.returnedDetailsDao(),
-            database.outboundDetailesDao(),
-            database.customerDao(),
-            database.stockDao()
-        )
-        val addUseCase = AddReturnedUseCase(repository)
-        val customerRepo = CustomerRepoImpl(database.customerDao())
-        val getAllReturnedUseCase = GetAllReturnedUseCase(repository)
-        val getAllCustomersUseCase = GetAllCustomersUseCase(customerRepo)
-        val getCustomerItemsUseCase = GetCustomerItemsUseCase(repository)
-        val getLastPriceUseCase = GetLastPriceUseCase(repository)
-        val getReturnedDetailsUseCase = GetReturnedDetailsUseCase(repository)
-        val getItemHistoryUseCas = GetItemHistoryUseCase(repository)
-
-
-        // تأكد أن الـ Factory يستقبل الـ UseCases الجديدة التي صممناها
-        ReturnedViewModelFactory(
-            getCustomerItemsUseCase,
-            getLastPriceUseCase,
-            getAllReturnedUseCase,
-            getReturnedDetailsUseCase,
-            addUseCase,
-            getAllCustomersUseCase,
-            getItemHistoryUseCas
-        )
-    }
+    private val viewModel: ReturnedViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_returned)
 
-        // ربط العناصر بالواجهة (بدون إعادة تعريف val)
+        initViews()
+        setupObservers()
+        handleEditMode()
+        setupListeners()
+    }
+
+    private fun initViews() {
         autoItem = findViewById(R.id.autoItem)
         autoCustomer = findViewById(R.id.autoCustomer)
         etQuantity = findViewById(R.id.etQuantity)
         etSellingPrice = findViewById(R.id.etSellingPrice)
         tvTotalInvoice = findViewById(R.id.tvTotalInvoice)
         tableItems = findViewById(R.id.tableItems)
+        btnSave = findViewById(R.id.btnSave)
+    }
 
-        val btnAddItem = findViewById<Button>(R.id.btnAddItem)
-        val btnSave = findViewById<Button>(R.id.btnSave)
+    private fun handleEditMode() {
+        val isEditMode = intent.getBooleanExtra("EDIT_MODE", false)
+        if (isEditMode) {
+            currentReturnedId = intent.getStringExtra("RETURNED_ID")?:""
+            val customerName = intent.getStringExtra("CUSTOMER_NAME") ?: ""
+            selectedCustomerId = intent.getIntExtra("CUSTOMER_ID", -1)
 
-        setupObservers()
-        setupListeners(btnAddItem, btnSave)
+            autoCustomer.setText(customerName)
+            btnSave.text = "تحديث المرتجع"
+
+            // تحميل التفاصيل من قاعدة البيانات
+            viewModel.loadReturnedDetails(currentReturnedId)
+
+            lifecycleScope.launch {
+                viewModel.returnedDetails.collect { details ->
+                    if (details.isNotEmpty() && tempItemsList.isEmpty()) {
+                        tableItems.removeAllViews()
+                        tempItemsList.clear()
+                        tempItemsList.addAll(details)
+                        totalInvoiceAmount = 0.0
+
+                        details.forEach { detail ->
+                            val rowTotal = detail.amount * detail.price
+                            addRowToTable(tableItems, detail.itemName ?: "صنف", detail.amount, rowTotal,detail.price)
+                            totalInvoiceAmount += rowTotal
+                        }
+                        tvTotalInvoice.text = String.format("%.2f ج.م", totalInvoiceAmount)
+                    }
+                }
+            }
+        }
     }
 
     private fun setupObservers() {
         // 1. مراقبة العملاء
         lifecycleScope.launch {
-            viewModel.allCustomers(this@AddReturnedActivity).collect { customers ->
-                currentCustomers = customers
+            viewModel.allCustomers().collect { customers ->
+                currentCustomerModels = customers
                 val names = customers.map { it.customerName }
-                customerAdapter = ArrayAdapter(
-                    this@AddReturnedActivity,
-                    android.R.layout.simple_dropdown_item_1line,
-                    names
-                )
+                customerAdapter = ArrayAdapter(this@AddReturnedActivity, android.R.layout.simple_dropdown_item_1line, names)
                 autoCustomer.setAdapter(customerAdapter)
             }
         }
 
-        // 2. مراقبة الأصناف (تتحدث عند اختيار العميل)
+        // 2. مراقبة كل الأصناف (تظهر فوراً بدون شرط العميل)
         lifecycleScope.launch {
-            viewModel.customerItems.collect { items ->
+            viewModel.allStockItems.collect { items ->
                 currentItems = items
                 val names = items.map { it.itemName }
-                itemAdapter = ArrayAdapter(
-                    this@AddReturnedActivity,
-                    android.R.layout.simple_dropdown_item_1line,
-                    names
-                )
+                itemAdapter = ArrayAdapter(this@AddReturnedActivity, android.R.layout.simple_dropdown_item_1line, names)
                 autoItem.setAdapter(itemAdapter)
             }
         }
-        findViewById<ImageButton>(R.id.btnShowItemHistory).setOnClickListener {
-            val selectedItemName = autoItem.text.toString()
-            val itemObject = currentItems.find { it.itemName == selectedItemName }
 
-            if (selectedCustomerId != -1 && itemObject != null) {
-                // 1. طلب البيانات من الـ ViewModel
-                viewModel.loadItemHistory(selectedCustomerId, itemObject.id)
-
-                // 2. عرض الـ BottomSheet (كما في الكود السابق)
-                showHistoryDialog(itemObject.itemName)
-            }
-        }
-        // 3. مراقبة سعر آخر بيع
+        // 3. مراقبة حالة الحفظ
         lifecycleScope.launch {
-            viewModel.lastPrice.collect { price ->
-                etSellingPrice.setText(price.toString())
+            viewModel.saveStatus.collect { resource ->
+
+                        Toast.makeText(this@AddReturnedActivity, "تمت العملية بنجاح", Toast.LENGTH_SHORT).show()
+                        finish()
+
+
             }
         }
+
+        // مراقبة سعر آخر بيع وسجل الشراء
+        lifecycleScope.launch { viewModel.lastPrice.collect { price -> etSellingPrice.setText(price.toString()) } }
     }
 
-    private fun setupListeners(btnAddItem: Button, btnSave: Button) {
-        // عند اختيار عميل
+    private fun setupListeners() {
+        val btnAddItem = findViewById<Button>(R.id.btnAddItem)
+
         autoCustomer.setOnItemClickListener { parent, _, position, _ ->
             val selectedName = parent.getItemAtPosition(position).toString()
-            val customer = currentCustomers.find { it.customerName == selectedName }
-
+            val customer = currentCustomerModels.find { it.customerName == selectedName }
             selectedCustomerId = customer?.id ?: -1
-
-            if (selectedCustomerId != -1) {
-                viewModel.loadItemsForCustomer(selectedCustomerId)
-                autoItem.setText("")
-            }
         }
-        // عند اختيار صنف
+
         autoItem.setOnItemClickListener { _, _, position, _ ->
             val selectedItem = currentItems[position]
-            viewModel.loadLastPrice(selectedCustomerId, selectedItem.id) // جلب آخر سعر بيع
+            if (selectedCustomerId != -1) {
+                viewModel.loadLastPrice(selectedCustomerId, selectedItem.id)
+            }
         }
 
-        // زر إضافة صنف للجدول
         btnAddItem.setOnClickListener {
-            val itemName = autoItem.text.toString()
-            val qty = etQuantity.text.toString().toIntOrNull() ?: 0
-            val price = etSellingPrice.text.toString().toDoubleOrNull() ?: 0.0
-
-            // نحتاج للوصول للـ ID الخاص بالصنف المختار
-            val selectedItemName = autoItem.text.toString()
-            val itemObject = currentItems.find { it.itemName == selectedItemName }
-
-            if (itemObject != null && qty > 0) {
-                val rowTotal = qty * price
-
-                // 1. الإضافة للقائمة البرمجية (هذا ما كان ينقصك)
-                tempItemsList.add(
-                    ReturnedDetailsModel(
-                        id = 0,
-                        returnedId = 0, // سيتحدد تلقائياً في الـ Room
-                        itemId = itemObject.id,
-                        amount = qty,
-                        price = price,
-                        itemName = ""
-                    )
-                )
-
-                // 2. الإضافة للجدول (UI)
-                addRowToTable(tableItems, itemName, qty, rowTotal)
-
-                totalInvoiceAmount += rowTotal
-                tvTotalInvoice.text = String.format("%.2f ج.م", totalInvoiceAmount)
-
-                clearInputFields()
-            } else {
-                Toast.makeText(this, "يرجى اختيار صنف صحيح وكمية", Toast.LENGTH_SHORT).show()
-            }
+            addNewItemToTable()
         }
-        // زر حفظ الفاتورة بالكامل
+
         btnSave.setOnClickListener {
-            Toast.makeText(this@AddReturnedActivity, "clicked", Toast.LENGTH_LONG).show()
-            if (selectedCustomerId != -1 && tempItemsList.isNotEmpty()) {
-                Toast.makeText(this@AddReturnedActivity, "good", Toast.LENGTH_LONG).show()
+            saveInvoice()
+        }
 
-                val paidAmount =
-                    findViewById<EditText>(R.id.etPaidAmount).text.toString().toDoubleOrNull()
-                        ?: 0.0
-                val debtAmount = totalInvoiceAmount - paidAmount
-
-                val returnedModel = ReturnedModel(
-                    id = 0,
-                    customerId = selectedCustomerId,
-                    returnedDate = SimpleDateFormat(
-                        "yyyy-MM-dd",
-                        Locale.getDefault()
-                    ).format(Date()),
-                    itemId = 0,
-                    latitude = 0.0,
-                    longitude = 0.0,
-                    userId = Prefs.getUserId(this@AddReturnedActivity)?:"",
-                )
-
-                viewModel.addReturned(returnedModel, tempItemsList, debtAmount)
-                finish()
-            }
+        findViewById<ImageButton>(R.id.btnShowItemHistory).setOnClickListener {
+            showHistoryIfPossible()
         }
     }
 
+    private fun addNewItemToTable() {
+        val itemName = autoItem.text.toString()
+        val qty = etQuantity.text.toString().toIntOrNull() ?: 0
+        val price = etSellingPrice.text.toString().toDoubleOrNull() ?: 0.0
+        val itemObject = currentItems.find { it.itemName == itemName }
+
+        if (itemObject != null && qty > 0) {
+            val rowTotal = qty * price
+            tempItemsList.add(
+                ReturnedDetailsModel(
+                UUID.randomUUID().toString(),
+                    currentReturnedId,
+                    itemObject.id,
+                    itemName,
+                    qty, price))
+            addRowToTable(tableItems, itemName, qty, rowTotal,price)
+            totalInvoiceAmount += rowTotal
+            tvTotalInvoice.text = String.format("%.2f ج.م", totalInvoiceAmount)
+            clearInputFields()
+        } else {
+            Toast.makeText(this, "بيانات الصنف غير مكتملة", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun saveInvoice() {
+        if (selectedCustomerId != -1 && tempItemsList.isNotEmpty()) {
+            val isEditMode = intent.getBooleanExtra("EDIT_MODE", false)
+            val debtAmount = totalInvoiceAmount
+
+            val model = ReturnedModel(
+                id = if (isEditMode) currentReturnedId else UUID.randomUUID().toString(),
+                customerId = selectedCustomerId,
+                returnedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                userId = Prefs.getUserId(this) ?: "",
+                latitude = 0.0,
+                longitude = 0.0,
+                updateAt = System.currentTimeMillis(),
+            )
+
+            viewModel.saveOrUpdateReturned(isEditMode, model, tempItemsList, debtAmount)
+        } else {
+            Toast.makeText(this, "يرجى اختيار عميل وأصناف", Toast.LENGTH_SHORT).show()
+        }
+    }
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
+    private fun addRowToTable(table: TableLayout, name: String, qty: Int, total: Double, unitPrice: Double) {
+        val row = TableRow(this).apply {
+            setPadding(0, 4, 0, 4)
+        }
+
+        // 1. اسم الصنف
+        val tvName = TextView(this).apply {
+            text = name; width = dpToPx(150); setPadding(12, 12, 12, 12)
+        }
+
+        // 2. خانة الكمية (EditText للتعديل)
+        val etQty = EditText(this).apply {
+            setText(qty.toString())
+            width = dpToPx(70)
+            inputType = InputType.TYPE_CLASS_NUMBER
+            gravity = Gravity.CENTER
+            background = null // لجعلها تبدو كجزء من الجدول
+        }
+
+        // 3. خانة سعر الوحدة (EditText للتعديل)
+        val etPrice = EditText(this).apply {
+            setText(unitPrice.toString())
+            width = dpToPx(80)
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            gravity = Gravity.CENTER
+            background = null
+        }
+
+        // 4. الإجمالي (TextView)
+        val tvRowTotal = TextView(this).apply {
+            text = String.format("%.2f", total)
+            width = dpToPx(90)
+            gravity = Gravity.CENTER
+        }
+
+        // منطق التحديث التلقائي عند تغيير الكمية أو السعر في الجدول
+        val updateTotalWatcher = object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                val newQty = etQty.text.toString().toIntOrNull() ?: 0
+                val newPrice = etPrice.text.toString().toDoubleOrNull() ?: 0.0
+                val newRowTotal = newQty * newPrice
+
+                tvRowTotal.text = String.format("%.2f", newRowTotal)
+
+                // تحديث القائمة البرمجية (tempItemsList)
+                val item = tempItemsList.find { it.itemName == name }
+                item?.let {
+                    it.amount = newQty
+                    it.price = newPrice
+                }
+                recalculateGrandTotal()
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        }
+
+        etQty.addTextChangedListener(updateTotalWatcher)
+        etPrice.addTextChangedListener(updateTotalWatcher)
+
+        // 5. زر الحذف
+        val btnDelete = ImageButton(this).apply {
+            setImageResource(android.R.drawable.ic_menu_delete)
+            setBackgroundColor(Color.TRANSPARENT)
+            setOnClickListener {
+                table.removeView(row)
+                tempItemsList.removeAll { it.itemName == name }
+                recalculateGrandTotal()
+            }
+        }
+
+        row.addView(tvName); row.addView(etQty); row.addView(etPrice); row.addView(tvRowTotal); row.addView(btnDelete)
+        table.addView(row)
+    }
+
+    // دالة لإعادة حساب إجمالي الفاتورة بالكامل
+    private fun recalculateGrandTotal() {
+        totalInvoiceAmount = tempItemsList.sumOf { it.amount * it.price }
+        tvTotalInvoice.text = String.format("%.2f ج.م", totalInvoiceAmount)
+    }
+
+    // عرض رصيد العميل عند الاختيار
+    private fun onCustomerSelected(customerModel: CustomerModel) {
+        selectedCustomerId = customerModel.id
+        val layoutDebt = findViewById<LinearLayout>(R.id.layoutCustomerDebt)
+        val tvDebt = findViewById<TextView>(R.id.tvCustomerDebt)
+
+        layoutDebt.visibility = View.VISIBLE
+        tvDebt.text = String.format("%.2f ج.م", customerModel.customerDebt) // تأكد إن الـ Model فيه currentDebt
+    }
+    private fun showHistoryIfPossible() {
+        val selectedItemName = autoItem.text.toString()
+        val itemObject = currentItems.find { it.itemName == selectedItemName }
+        if (selectedCustomerId != -1 && itemObject != null) {
+            viewModel.loadItemHistory(selectedCustomerId, itemObject.id)
+            showHistoryDialog(itemObject.itemName)
+        }
+    }
+
+    private fun clearInputFields() {
+        autoItem.setText(""); etQuantity.setText(""); etSellingPrice.setText("")
+    }
     @SuppressLint("MissingInflatedId")
     private fun showHistoryDialog(itemName: String) {
-        // 1. إنشاء الـ BottomSheetDialog
+        // 1. إنشاء الـ BottomSheetDialog وتجهيز الواجهة
         val bottomSheet = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.layout_item_history_bottom_sheet, null)
 
@@ -248,32 +327,34 @@ class AddReturnedActivity : AppCompatActivity() {
         tvTitle.text = "سجل شراء: $itemName"
 
         // 2. مراقبة البيانات القادمة من الـ ViewModel
+        // استخدمنا collectLatest عشان لو البيانات اتحدثت يعرض آخر حاجة
         lifecycleScope.launch {
             viewModel.itemHistory.collectLatest { historyList ->
-                container.removeAllViews() // مسح البيانات القديمة قبل العرض الجديد
+                container.removeAllViews() // مسح البيانات القديمة (Loading state)
 
                 if (historyList.isEmpty()) {
+                    // عرض رسالة في حالة عدم وجود سجل
                     val emptyTv = TextView(this@AddReturnedActivity).apply {
                         text = "لا توجد عمليات بيع سابقة لهذا العميل لهذا الصنف"
                         gravity = Gravity.CENTER
                         setPadding(0, 50, 0, 50)
+                        setTextColor(Color.GRAY)
                     }
                     container.addView(emptyTv)
                 } else {
+                    // عرض السجل سطر بسطر
                     historyList.forEach { history ->
-                        // تصميم شكل السطر (يمكنك تحسينه بـ Custom Layout)
-                        val historyView =
-                            layoutInflater.inflate(R.layout.item_history_row, container, false)
-                        historyView.findViewById<TextView>(R.id.tvHistoryDate).text = history.date
-                        historyView.findViewById<TextView>(R.id.tvHistoryQty).text =
-                            "الكمية: ${history.amount}"
-                        historyView.findViewById<TextView>(R.id.tvHistoryPrice).text =
-                            "السعر: ${history.price} ج.م"
+                        val historyView = layoutInflater.inflate(R.layout.item_history_row, container, false)
 
-                        // ميزة إضافية: عند الضغط على السطر يتم وضع السعر في الحقل الرئيسي
+                        historyView.findViewById<TextView>(R.id.tvHistoryDate).text = history.date
+                        historyView.findViewById<TextView>(R.id.tvHistoryQty).text = "الكمية: ${history.amount}"
+                        historyView.findViewById<TextView>(R.id.tvHistoryPrice).text = "السعر: ${history.price} ج.م"
+
+                        // ميزة احترافية: عند الضغط على سطر قديم، يتم وضع السعر في الحقل الرئيسي
                         historyView.setOnClickListener {
                             etSellingPrice.setText(history.price.toString())
-                            bottomSheet.dismiss() // إغلاق النافذة
+                            bottomSheet.dismiss() // إغلاق النافذة بعد الاختيار
+                            Toast.makeText(this@AddReturnedActivity, "تم اختيار السعر القديم", Toast.LENGTH_SHORT).show()
                         }
 
                         container.addView(historyView)
@@ -284,45 +365,11 @@ class AddReturnedActivity : AppCompatActivity() {
 
         bottomSheet.setContentView(view)
         bottomSheet.show()
-    }
 
-    private fun addRowToTable(table: TableLayout, name: String, qty: Int, total: Double) {
-        val row = TableRow(this)
-        row.setPadding(8, 8, 8, 8)
-
-        val tvName = TextView(this).apply {
-            text = name; layoutParams =
-            TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f)
+        // تصفير السجل في الـ ViewModel عند إغلاق الـ Dialog عشان ميعرضش داتا قديمة المرة الجاية
+        bottomSheet.setOnDismissListener {
+            viewModel.clearHistory()
         }
-        val tvQty = TextView(this).apply { text = qty.toString(); gravity = Gravity.CENTER }
-        val tvTotal =
-            TextView(this).apply { text = String.format("%.2f", total); gravity = Gravity.CENTER }
-
-        val btnDelete = ImageButton(this).apply {
-            setImageResource(android.R.drawable.ic_menu_delete)
-            setBackgroundColor(Color.TRANSPARENT)
-            setOnClickListener {
-                table.removeView(row)
-                updateTotalAfterDelete(total)
-            }
-        }
-
-        row.addView(tvName)
-        row.addView(tvQty)
-        row.addView(tvTotal)
-        row.addView(btnDelete)
-        table.addView(row)
     }
-
-    private fun updateTotalAfterDelete(amountToSubtract: Double) {
-        totalInvoiceAmount -= amountToSubtract
-        if (totalInvoiceAmount < 0) totalInvoiceAmount = 0.0
-        tvTotalInvoice.text = String.format("%.2f ج.م", totalInvoiceAmount)
-    }
-
-    private fun clearInputFields() {
-        autoItem.setText("")
-        etQuantity.setText("")
-        etSellingPrice.setText("")
-    }
+    // ... دالة showHistoryDialog كما هي عندك ...
 }

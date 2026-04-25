@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
     id("com.google.devtools.ksp") // Add this line
+    id ("com.google.dagger.hilt.android")
+
 }
 
 android {
@@ -93,6 +95,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:storage-kt:3.0.1")
     implementation(libs.protolite.well.known.types)
     implementation(libs.androidx.swiperefreshlayout)
+    implementation(libs.androidx.hilt.common)
 
     // Ktor required for Supabase
     val ktor_version = "3.0.0"
@@ -142,4 +145,12 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:5.2.3")
     implementation("androidx.print:print:1.0.0")
     implementation("net.objecthunter:exp4j:0.4.8")
+
+
+    implementation("com.google.dagger:hilt-android:2.57.1")
+    ksp("com.google.dagger:hilt-android-compiler:2.57.1")
+
+    // Hilt Extension for WorkManager
+    implementation("androidx.hilt:hilt-work:1.3.0")
+    implementation("com.github.DantSu:ESCPOS-ThermalPrinter-Android:3.3.0")
 }

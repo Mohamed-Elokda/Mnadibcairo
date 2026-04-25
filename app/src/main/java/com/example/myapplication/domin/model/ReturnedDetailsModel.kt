@@ -1,10 +1,10 @@
 package com.example.myapplication.domin.model
 
 data class ReturnedDetailsModel(
-    val id: Int,
-    val returnedId: Int,
+    val id: String,
+    val returnedId: String,
     val itemId: Int,
     val itemName: String,
-    val amount: Int,
-    val price: Double,
+    var amount: Int,
+    var price: Double,
 )

@@ -3,38 +3,51 @@ package com.example.myapplication.data.repository
 import android.util.Log
 import com.example.myapplication.data.local.dao.StockDao
 import com.example.myapplication.data.local.dao.TransferDao
+import com.example.myapplication.data.local.entity.TransferEntity
+import com.example.myapplication.data.remote.dto.ReturnedDto
+import com.example.myapplication.data.remote.dto.TransferDetailsDto
 import com.example.myapplication.data.remote.dto.TransferDto
-import com.example.myapplication.data.remote.manager.supabase
 import com.example.myapplication.data.toDto
 import com.example.myapplication.data.toEntity
 import com.example.myapplication.domin.model.Transfer
+import com.example.myapplication.domin.model.TransferDetailWithItemName
 import com.example.myapplication.domin.model.TransferDetails
+import com.example.myapplication.domin.model.TransferWithStoreName
 import com.example.myapplication.domin.repository.ITransferRepository
+import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 
-class TransferRepositoryImpl(
+class TransferRepositoryImpl @Inject constructor(
+    private val supabase: SupabaseClient,
     private val transferDao: TransferDao,
     private val stockDao: StockDao
 ) : ITransferRepository {
 
-    override suspend fun saveTransfer(transfer: Transfer, details: List<TransferDetails>): Result<Unit> {
+    override suspend fun saveTransfer(
+        transfer: Transfer,
+        details: List<TransferDetails>
+    ): Result<Unit> {
         return try {
             // تنفيذ العملية كعملية واحدة (Transaction)
             val tId = transferDao.insertTransfer(transfer.toEntity()).toInt()
 
             details.forEach { detail ->
-                transferDao.insertTransferDetail(detail.copy(transferId = tId).toEntity())
+                transferDao.insertTransferDetail(detail.copy(transferId = transfer.id).toEntity())
 
                 // 1. الخصم من المخزن المصدر (مثل الصادر)
                 stockDao.updateStockQuantity(detail.itemId, -detail.amount)
 
                 // 2. الإضافة للمخزن الوجهة (مثل الوارد)
                 // ملحوظة: إذا كان جدول الـ Stock يدعم IDs المخازن، مرر الـ toStoreId هنا
-                stockDao.updateStockQuantity(detail.itemId, detail.amount)
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -42,37 +55,56 @@ class TransferRepositoryImpl(
         }
     }
 
-    override suspend fun syncTransfers(): Result<Unit> = withContext(Dispatchers.IO) {
-        return@withContext try {
-            // 1. جلب العمليات التي لم يتم مزامنتها
-            val unsynced = transferDao.getUnsyncedTransfers() // تأكد من وجود هذه الدالة في الـ DAO
 
-            for (transferEntity in unsynced) {
-                // 2. رفع رأس الفاتورة إلى سوبابيس (جدول transfers)
-                val response = supabase.from("transfers").upsert(transferEntity.toDto()) {
-                    select()
-                }.decodeSingle<TransferDto>()
+    // في الـ Implementation
+    override fun getTransferDetails(transferId: String): Flow<List<TransferDetailWithItemName>> {
+        return transferDao.getTransferDetailsWithNames(transferId)
+    }
 
-                val supabaseTransferId = response.id ?: throw Exception("فشل الحصول على ID من السيرفر")
+    override fun getAllTransfers(userId: String): Flow<List<TransferWithStoreName>> {
+        return transferDao.getAllTransfersWithStoreName(userId)
+    }
 
-                // 3. جلب التفاصيل المرتبطة بهذه الفاتورة محلياً
-                val details = transferDao.getDetailsByTransferIdSync(transferEntity.id)
+    override suspend fun deleteFullTransfer(transferId: String) {
+        transferDao.deleteTransferDetailsByParentId(transferId)
+        transferDao.deleteTransferById(transferId)
+    }
 
-                if (details.isNotEmpty()) {
-                    // 4. رفع التفاصيل دفعة واحدة مع ربطها بالـ ID الجديد من سوبابيس
-                    val detailsDtoList = details.map {
-                        it.toDto().copy(transferId = supabaseTransferId)
+
+    override suspend fun syncTransferFromServer(userId: String) {
+        try {
+            // 1. جلب رؤوس المناقلات
+            val remoteTransfers = supabase.from("transfers")
+                .select { filter { eq("user_id", userId) } }
+                .decodeList<TransferDto>()
+
+            if (remoteTransfers.isNotEmpty()) {
+                val transferEntities = remoteTransfers.map { it.toEntity() }
+                transferDao.insertTransferList(transferEntities)
+
+                // 2. تجميع الـ IDs (تأكد من تنظيفها من الـ null)
+                val transferIds = remoteTransfers.map { it.id }.filterNotNull()
+
+                // 3. جلب تفاصيل المناقلات (التعديل هنا)
+                val remoteDetails = supabase.from("transfer_details")
+                    .select {
+                        filter {
+                            // استخدام isIn بدلاً من filter(FilterOperator.IN)
+                            isIn("transfer_id", transferIds)
+                        }
                     }
-                    supabase.from("transfer_details").insert(detailsDtoList)
+                    .decodeList<TransferDetailsDto>()
 
-                    // 5. تحديث الحالة محلياً للرأس والتفاصيل
-                    transferDao.updateSyncStatus(transferEntity.id, true)
+                // 4. حفظ التفاصيل
+                if (remoteDetails.isNotEmpty()) {
+                    val detailEntities = remoteDetails.map { it.toEntity() }
+                    transferDao.insertTransferDetailList(detailEntities)
                 }
+
+                Log.d("Sync", "تمت مزامنة ${remoteTransfers.size} مناقلة بنجاح.")
             }
-            Result.success(Unit)
         } catch (e: Exception) {
-            Log.e("SyncTransfers", "خطأ أثناء المزامنة: ${e.message}")
-            Result.failure(e)
+            Log.e("Sync", "Error fetching transfers: ${e.message}")
         }
     }
 }

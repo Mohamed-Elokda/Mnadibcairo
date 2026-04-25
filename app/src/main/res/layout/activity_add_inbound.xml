@@ -4,55 +4,63 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
-    android:layoutDirection="rtl"
-    android:background="#FBFBFB"
-    tools:context=".ui.inbound.AddInboundActivity">
+    android:id="@+id/mainadd"
+    android:background="#F4F7F9"
+    android:layoutDirection="rtl">
+
+    <LinearLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#1976D2"
+        android:elevation="4dp"
+        android:orientation="vertical"
+        android:padding="20dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="إضافة فاتورة مشتريات"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <ScrollView
+        android:id="@+id/invoiceScrollView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:scrollbars="none"
-        app:layout_constraintBottom_toTopOf="@+id/btnSave"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="NotSibling"
-        tools:layout_editor_absoluteX="16dp">
+        android:fillViewport="true"
+        android:isScrollContainer="true"
+        app:layout_constraintTop_toBottomOf="@id/headerLayout"
+        app:layout_constraintBottom_toTopOf="@+id/btnSave">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/tvTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginBottom="20dp"
-                android:text="إضافة فاتورة وارد (مشتريات)"
-                android:textColor="@color/black"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+            android:orientation="vertical"
+            android:padding="16dp">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp">
+                app:cardCornerRadius="12dp"
+                app:cardElevation="3dp"
+                app:cardUseCompatPadding="true">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="12dp">
+                    android:padding="16dp">
 
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:hint="رقم الفاتورة">
+                        android:hint="رقم الفاتورة"
+                        app:startIconDrawable="@android:drawable/ic_menu_edit">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etInvoiceNumber"
@@ -65,150 +73,113 @@
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:hint="من مخزن">
+                        android:layout_marginTop="12dp"
+                        android:hint="المورد / المخزن">
 
                         <AutoCompleteTextView
                             android:id="@+id/fromAutoSupplier"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text" />
+                            android:layout_height="wrap_content" />
                     </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                    <Button
-                        android:id="@+id/btnAddPhoto"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="3dp"
+                app:cardUseCompatPadding="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="إرفاق صورة الفاتورة"
-                        app:icon="@android:drawable/ic_menu_camera" />
+                        android:hint="بحث عن صنف...">
 
-                    <ImageView
-                        android:id="@+id/ivPhotoPreview"
+                        <AutoCompleteTextView
+                            android:id="@+id/autoItem"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
-                        android:layout_height="180dp"
-                        android:layout_marginTop="8dp"
-                        android:background="#EEEEEE"
-                        android:scaleType="centerCrop"
-                        android:visibility="gone" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:hint="الكمية">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etQuantity"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="phone" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddItem"
+                        android:layout_width="match_parent"
+                        android:layout_height="55dp"
+                        android:layout_marginTop="16dp"
+                        android:text="إضافة الصنف للقائمة"
+                        app:cornerRadius="8dp"
+                        app:icon="@android:drawable/ic_input_add" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="إضافة أصناف للوارد"
+                android:layout_marginVertical="12dp"
+                android:text="الأصناف المضافة"
+                android:textColor="#333"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
-            <com.google.android.material.card.MaterialCardView
+            <HorizontalScrollView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp">
+                android:layout_height="wrap_content">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <TableLayout
+                    android:id="@+id/tableItems"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="12dp">
+                    android:background="@android:color/white"
+                    android:padding="4dp"
+                    android:stretchColumns="0">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:weightSum="3">
-
-                        <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp"
-                            android:layout_weight="2"
-                            android:hint="اختر الصنف">
-
-                            <AutoCompleteTextView
-                                android:id="@+id/autoItem"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-                        </com.google.android.material.textfield.TextInputLayout>
-
-
-                        <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginEnd="4dp"
-                            android:layout_weight="1"
-                            android:hint="الكمية">
-
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etQuantity"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:digits="0123456789.+-*/"
-                                android:inputType="phone" />
-                        </com.google.android.material.textfield.TextInputLayout>
-
-
-                    </LinearLayout>
-
-
-                    <Button
-                        android:id="@+id/btnAddItem"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:backgroundTint="#00897B"
-                        android:text="إضافة الصنف للقائمة" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <TableLayout
-                android:id="@+id/tableItems"
+                    <TableRow android:background="#E3F2FD" android:padding="12dp">
+                        <TextView android:text="اسم الصنف" android:textStyle="bold" android:minWidth="180dp"/>
+                        <TextView android:text="الكمية" android:textStyle="bold" android:gravity="center" android:minWidth="100dp"/>
+                        <TextView android:text="" android:layout_width="40dp"/>
+                    </TableRow>
+                </TableLayout>
+            </HorizontalScrollView>
+            <View
+                android:id="@+id/keyboardSpace"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@android:color/white"
-                android:stretchColumns="*">
-
-                <TableRow
-                    android:background="#E0E0E0"
-                    android:padding="10dp">
-
-                    <TextView
-                        android:layout_weight="1"
-                        android:text="الصنف"
-                        android:layoutDirection="locale"
-
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:gravity="center"
-                        android:text="الكمية"
-                        android:textStyle="bold" />
-
-
-
-                    <TextView
-                        android:layout_width="40dp"
-                        android:text="" />
-                </TableRow>
-            </TableLayout>
-
-
+                android:layout_height="0dp" />
         </LinearLayout>
     </ScrollView>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSave"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:backgroundTint="#1976D2"
-        android:text="حفظ واعتماد فاتورة الوارد"
+        android:layout_height="65dp"
+        android:layout_margin="16dp"
+        android:text="حفظ واعتماد الفاتورة"
         android:textSize="18sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:textStyle="bold"
+        app:backgroundTint="#2E7D32"
+        app:cornerRadius="12dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

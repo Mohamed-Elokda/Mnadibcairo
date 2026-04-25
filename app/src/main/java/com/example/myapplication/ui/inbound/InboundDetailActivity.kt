@@ -13,6 +13,8 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import coil.load
 import com.example.myapplication.R
@@ -21,13 +23,14 @@ import com.example.myapplication.data.local.entity.InboundDetailWithItemName
 
 import com.example.myapplication.data.repository.InboundRepositoryImpl
 import com.example.myapplication.domin.model.InboundDetails
-import com.example.myapplication.domin.useCase.AddInboundUseCase
-import com.example.myapplication.domin.useCase.GetInboundDetailsUseCase
+import com.example.myapplication.domin.useCase.inboundUseCases.AddInboundUseCase
+import com.example.myapplication.domin.useCase.inboundUseCases.GetInboundDetailsUseCase
+import dagger.hilt.android.AndroidEntryPoint
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
 
 
-
+@AndroidEntryPoint
 class InboundDetailActivity : AppCompatActivity() {
 
     private var remoteImageUrl: String? = null
@@ -36,26 +39,17 @@ class InboundDetailActivity : AppCompatActivity() {
     private lateinit var btnPDF: Button
     private lateinit var btnExcel: Button
     // إعداد الـ ViewModel مع الـ UseCase الجديد
-    private val viewModel: InboundViewModel by viewModels {
-        val database = AppDatabase.getDatabase(this)
-        val repository = InboundRepositoryImpl(
-            database.inboundDao(),
-            database.inboundDetailesDao(),
-            database.stockDao(),
-            database.suppliedDao(),
-            database.itemsDao()
-        )
-        // إضافة الـ UseCase الجديد للـ Factory
-        InboundViewModelFactory(
-            AddInboundUseCase(repository),
-            GetInboundDetailsUseCase(repository),
-            repository
-        )
-    }
+    private val viewModel: InboundViewModel by viewModels ()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_inbound_detail)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.mainadID)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            // بنخلي الـ Padding يراعي ارتفاع الـ StatusBar من فوق والـ NavigationBar من تحت
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
         btnPrint = findViewById(R.id.btnPrint)
         btnPDF = findViewById(R.id.btnExportPDF)
         btnExcel = findViewById(R.id.btnExportExcel)
@@ -71,10 +65,9 @@ class InboundDetailActivity : AppCompatActivity() {
         val tvDate = findViewById<TextView>(R.id.tvDetailDate)
 
         val tableItems = findViewById<TableLayout>(R.id.tableDetailItems)
-        val btnViewPhoto = findViewById<Button>(R.id.btnViewPhoto)
 
         // 1. استقبال البيانات من الـ Intent
-        val inboundId = intent.getLongExtra("INBOUND_ID", -1L)
+        val inboundId = intent.getStringExtra("INBOUND_ID")?:""
         val supplier = intent.getStringExtra("SUPPLIER") ?: "غير معروف"
         val date = intent.getStringExtra("DATE")
         remoteImageUrl = intent.getStringExtra("IMAGE_URL")
@@ -91,7 +84,7 @@ class InboundDetailActivity : AppCompatActivity() {
 
 
         // 3. مراقبة تفاصيل الفاتورة من قاعدة البيانات
-        if (inboundId != -1L) {
+        if (inboundId.isNotEmpty()) {
             viewModel.getInboundDetails(inboundId).observe(this) { detailsList ->
                 displayDetailsInTable(detailsList, tableItems)
             }
@@ -99,13 +92,7 @@ class InboundDetailActivity : AppCompatActivity() {
             Toast.makeText(this, "خطأ في تحميل رقم الفاتورة", Toast.LENGTH_SHORT).show()
         }
 
-        btnViewPhoto.setOnClickListener {
-            if (!remoteImageUrl.isNullOrEmpty()) {
-                showImageDialog(remoteImageUrl!!)
-            } else {
-                Toast.makeText(this, "لا توجد صورة لهذه الفاتورة", Toast.LENGTH_SHORT).show()
-            }
-        }
+
     }
     private fun printInvoice() {
         // 1. جلب البيانات من الواجهة

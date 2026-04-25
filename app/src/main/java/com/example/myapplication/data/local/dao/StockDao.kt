@@ -29,6 +29,7 @@ interface StockDao {
         Stock.userId, 
         IFNULL(Items.itemName, 'صنف غير معرف') as itemName, 
         Stock.CurrentAmount, 
+        Stock.InitAmount, 
         Stock.fristDate
     FROM Stock 
     LEFT JOIN Items ON TRIM(Stock.ItemId) = CAST(Items.id AS TEXT)

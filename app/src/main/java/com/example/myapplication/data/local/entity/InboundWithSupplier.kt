@@ -2,7 +2,7 @@ package com.example.myapplication.data.local.entity
 
 data class InboundWithSupplier(
     // حقول الـ InboundEntity التي تهمك
-    val id:Int,
+    val id: String,
     val invorseNum:Int,
     val userId: String,
     val fromSppliedId: Int,

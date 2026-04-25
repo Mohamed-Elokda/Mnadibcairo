@@ -6,8 +6,8 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "Inbound")
 data class InboundEntity (
-    @PrimaryKey(autoGenerate = true)
-    val id:Int,
+    @PrimaryKey()
+    val id: String=java.util.UUID.randomUUID().toString(),
     val invorseNum:Int,
     val userId: String,
     val fromSppliedId: Int,

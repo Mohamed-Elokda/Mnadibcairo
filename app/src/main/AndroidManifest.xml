@@ -7,9 +7,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <application
-        android:name=".core.MyApplication"
+        android:name=".MyApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -18,6 +19,21 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
+        <activity
+            android:name=".ui.transfer.TransferDetailsActivity"
+            android:exported="false" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
         <activity
             android:name=".ui.transfer.AddTransferActivity"
             android:exported="false" />
@@ -57,17 +73,19 @@
         </provider>
 
         <activity
-            android:name=".ui.CustomersActivity"
+            android:name=".ui.customerState.CustomersActivity"
             android:exported="false" />
         <activity
             android:name=".AddCompanyActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".StatementActivity"
             android:exported="false" />
         <activity
             android:name=".AddStakeholderActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.login.LoginActivity"
             android:exported="true">
@@ -85,7 +103,8 @@
             android:exported="false" />
         <activity
             android:name=".ui.inbound.AddInboundActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.inbound.InboundDetailActivity"
             android:exported="false" />
@@ -94,7 +113,8 @@
             android:exported="false" />
         <activity
             android:name=".ui.outbound.AddOutboundActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.outbound.OutboundDetailActivity"
             android:exported="false" />

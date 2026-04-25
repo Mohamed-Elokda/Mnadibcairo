@@ -12,29 +12,18 @@ import com.example.myapplication.R
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.repository.CustomerRepoImpl
 import com.example.myapplication.data.repository.PaymentRepositoryImpl
+import com.example.myapplication.domin.model.PaymentMethod
 import com.example.myapplication.domin.repository.CustomerRepo
 import com.google.android.material.button.MaterialButtonToggleGroup
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class AddPaymentActivity : AppCompatActivity() {
 
     private var selectedCustomerId: Int? = null
+    private var selectedPaymentMethod = PaymentMethod.CASH
     private var selectedType = "نقدي"
-    private val viewModel: PaymentsViewModel by viewModels {
-        val database = AppDatabase.getDatabase(this)
-
-        // إنشاء الـ Repository (تأكد من مطابقة المعاملات للـ Constructor الخاص به)
-        val repository = PaymentRepositoryImpl(
-            database,
-            database.PaymentDao(),
-            database.customerDao()
-        )
-        val Customerrepository = CustomerRepoImpl(
-            database.customerDao(),
-        )
-
-        // استخدام الفاكتوري (سنقوم بإنشائه في الخطوة التالية)
-        PaymentsViewModelFactory(repository,Customerrepository)
-    }
+    private val viewModel: PaymentsViewModel by viewModels ()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_payment)
@@ -62,10 +51,19 @@ class AddPaymentActivity : AppCompatActivity() {
                 }
             }
         }
-
+        toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                selectedPaymentMethod = when (checkedId) {
+                    R.id.btnVodafone -> PaymentMethod.E_WALLET
+                    R.id.btnInstaPay -> PaymentMethod.E_WALLET
+                    else -> PaymentMethod.CASH
+                }
+            }
+        }
         // 3. حفظ البيانات
         btnSave.setOnClickListener {
             val amount = findViewById<EditText>(R.id.etPaymentAmount).text.toString().toDoubleOrNull()
+            val notes = findViewById<EditText>(R.id.etNotes).text.toString()
 
             if (selectedCustomerId == null || amount == null || amount <= 0) {
                 Toast.makeText(this, "يرجى إكمال البيانات بشكل صحيح", Toast.LENGTH_SHORT).show()
@@ -73,7 +71,7 @@ class AddPaymentActivity : AppCompatActivity() {
             }
 
             // تنفيذ الحفظ وتحديث رصيد العميل في الـ ViewModel
-            viewModel.savePayment(selectedCustomerId!!, amount, selectedType)
+            viewModel.savePayment(selectedCustomerId!!, amount, selectedType,selectedPaymentMethod,notes)
             finish() // العودة للخلف بعد النجاح
         }
     }

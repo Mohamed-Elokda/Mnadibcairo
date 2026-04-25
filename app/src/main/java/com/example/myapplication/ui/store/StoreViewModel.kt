@@ -7,6 +7,8 @@ import com.example.myapplication.data.local.Prefs
 import com.example.myapplication.domin.model.Stock
 import com.example.myapplication.domin.useCase.GetStockFromServer
 import com.example.myapplication.domin.useCase.GetStockUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.http.ContentType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,13 +17,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-class StoreViewModel(
-    private val userId: String,
+import javax.inject.Inject
+@HiltViewModel
+class StoreViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val getStockUseCase: GetStockUseCase,
     private val getStockFromServer: GetStockFromServer
 ) : ViewModel() {
-
+    private val userId: String = Prefs.getUserId(context) ?: ""
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
 

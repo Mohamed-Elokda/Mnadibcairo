@@ -4,8 +4,9 @@ import com.example.myapplication.domin.model.ReturnedModel
 import com.example.myapplication.domin.model.ReturnedWithNameModel
 import com.example.myapplication.domin.repository.ReturnedRepo
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
-class GetAllReturnedUseCase(private val repository: ReturnedRepo) {
+class GetAllReturnedUseCase @Inject constructor(private val repository: ReturnedRepo) {
     fun execute(): Flow<List<ReturnedWithNameModel>> {
         return repository.getAllReturned()
     }

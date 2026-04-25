@@ -23,10 +23,14 @@ interface IInboundRepository {
     suspend fun saveInboundTransaction(inbound: Inbound, details: List<InboundDetails>): Result<Unit>
     fun getAllItems(): Flow<List<Items>>
     suspend fun insertItemsList(entities: List<ItemsEntity>)
-    fun getDetailsByInboundId(inboundId: Long): kotlinx.coroutines.flow.Flow<kotlin.collections.List<com.example.myapplication.data.local.entity.InboundDetailWithItemName>>
+    fun getDetailsByInboundId(inboundId: String): Flow<List<InboundDetailWithItemName>>
     suspend fun addInSupbase(inbound: Inbound, details: List<InboundDetails>)
     suspend fun deleteInbound(inbound: Inbound)
+    suspend fun syncUnsynced()
     suspend fun deleteFullInbound(inbound: Inbound): Result<Unit>
     suspend fun syncInboundFromServer(userId: String)
     fun getAllSupplied(): Flow<List<SuppliedModel>>
+
+
+    suspend fun syncWithConflictResolution()
 }

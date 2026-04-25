@@ -17,26 +17,12 @@ import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.repository.CustomerRepoImpl
 import com.example.myapplication.data.repository.PaymentRepositoryImpl
 import com.example.myapplication.domin.model.PaymentItem
+import dagger.hilt.android.AndroidEntryPoint
 import kotlin.getValue
-
+@AndroidEntryPoint
 class PaymentActivity : AppCompatActivity() {
     private lateinit var adapter: PaymentsAdapter
-    private val viewModel: PaymentsViewModel by viewModels {
-        val database = AppDatabase.getDatabase(this)
-
-        // إنشاء الـ Repository (تأكد من مطابقة المعاملات للـ Constructor الخاص به)
-        val repository = PaymentRepositoryImpl(
-            database,
-            database.PaymentDao(),
-            database.customerDao()
-        )
-        val Customerrepository = CustomerRepoImpl(
-            database.customerDao(),
-        )
-
-        // استخدام الفاكتوري (سنقوم بإنشائه في الخطوة التالية)
-        PaymentsViewModelFactory(repository,Customerrepository)
-    }
+    private val viewModel: PaymentsViewModel by viewModels ()
 
     private var fullList = listOf<PaymentItem>() // القائمة الأصلية من قاعدة البيانات
     override fun onCreate(savedInstanceState: Bundle?) {

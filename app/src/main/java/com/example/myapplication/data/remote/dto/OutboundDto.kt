@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class OutboundDto(
-    @SerialName("id") val id: Int? = null,
+    @SerialName("id") val id: String,
     @SerialName("user_id") val userId: String,
     @SerialName("customer_id") val customerId: Int,
     @SerialName("invoice_number") val invoiceNumber: Int,
@@ -14,6 +14,9 @@ data class OutboundDto(
     @SerialName("latitude") val latitude: Double,
     @SerialName("longitude") val longitude: Double,
     @SerialName("money_receive") val moneyReceive: Int,
-    val updated_at: Long? = null // ستقوم Supabase بتعبئته تلقائياً عند الجلب
+    val previousDebt: Double ,   // الرصيد السابق (مديونية العميل قبل هذه الفاتورة)
+    val totalRemainder: Double , // المتبقي النهائي (الرصيد السابق + إجمالي الفاتورة - المدفوع)
+
+    val updated_at: Long? = null, // ستقوم Supabase بتعبئته تلقائياً عند الجلب
 
 )

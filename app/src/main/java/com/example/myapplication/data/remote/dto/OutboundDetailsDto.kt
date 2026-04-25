@@ -6,11 +6,12 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class OutboundDetailsDto(
-    val id: Int? = null, // أو Long حسب تعريفك
-    val outbound_id: Int,
-    val item_id: Int,
+    @SerialName("id") val id: String,
+  val item_id: Int,
+  val outbound_id: String,
     val amount: Double,
     val price: Double,
+
     val updated_at: Long? = null // ستقوم Supabase بتعبئته تلقائياً عند الجلب
 
 )

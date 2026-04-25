@@ -5,8 +5,9 @@ import com.example.myapplication.data.local.entity.ReturnedEntity
 import com.example.myapplication.domin.model.ReturnedDetailsModel
 import com.example.myapplication.domin.model.ReturnedModel
 import com.example.myapplication.domin.repository.ReturnedRepo
+import javax.inject.Inject
 
-class AddReturnedUseCase(private val repository: ReturnedRepo) {
+class AddReturnedUseCase @Inject constructor(private val repository: ReturnedRepo) {
     suspend fun saveLocally(returned: ReturnedModel, details: List<ReturnedDetailsModel>, debtAmount: Double): Result<Unit> {
         return try {
             repository.insertReturned(returned, details,debtAmount)

@@ -1,15 +1,15 @@
 package com.example.myapplication.domin.repository
 
-import com.example.myapplication.domin.model.Customer
+import com.example.myapplication.domin.model.CustomerModel
 import kotlinx.coroutines.flow.Flow
 
 
 interface CustomerRepo {
-    suspend fun insertCustomer(customer: Customer):Int
-    suspend fun updateCustomer(customer: Customer)
-    suspend fun deleteCustomer(customer: Customer)
-    suspend fun getCustomerById(id: Int): Customer?
-     fun getAllCustomers(userId: String): Flow<List<Customer>>
+    suspend fun insertCustomer(customerModel: CustomerModel):Int
+    suspend fun updateCustomer(customerModel: CustomerModel)
+    suspend fun deleteCustomer(customerModel: CustomerModel)
+    suspend fun getCustomerById(id: Int): CustomerModel?
+     fun getAllCustomers(userId: String): Flow<List<CustomerModel>>
     suspend fun syncCustomersFromServer(userId: String)
 
 }

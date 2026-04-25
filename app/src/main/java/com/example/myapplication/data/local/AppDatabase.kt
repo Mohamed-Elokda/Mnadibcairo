@@ -17,6 +17,7 @@ import com.example.myapplication.data.local.dao.ReturnedDetailsDao
 import com.example.myapplication.data.local.dao.StockDao
 import com.example.myapplication.data.local.dao.SuppliedDao
 import com.example.myapplication.data.local.dao.TransferDao
+import com.example.myapplication.data.local.dao.VaultDao
 import com.example.myapplication.data.local.entity.Customer
 import com.example.myapplication.data.local.entity.InboundEntity
 import com.example.myapplication.data.local.entity.InboundDetailesEntity
@@ -31,9 +32,28 @@ import com.example.myapplication.data.local.entity.StockEntity
 import com.example.myapplication.data.local.entity.Supplied
 import com.example.myapplication.data.local.entity.TransferDetailsEntity
 import com.example.myapplication.data.local.entity.TransferEntity
+import com.example.myapplication.data.local.entity.VaultEntity
 
-@Database(entities = [ StockEntity::class, Customer::class, InboundEntity::class, InboundDetailesEntity::class, OutboundEntity::class, OutboundDetailesEntity::class
-                     , ItemsEntity::class, Supplied::class, PaymentEntity::class, ReturnedEntity::class, ReturnedDetailsEntity::class, TransferDetailsEntity::class, TransferEntity::class], version = 20,exportSchema = false)
+@Database(
+    entities = [
+        StockEntity::class,
+        Customer::class,
+        InboundEntity::class,
+        InboundDetailesEntity::class,
+        OutboundEntity::class,
+        OutboundDetailesEntity::class,
+        ItemsEntity::class,
+        Supplied::class,
+        PaymentEntity::class,
+        ReturnedEntity::class,
+        ReturnedDetailsEntity::class,
+        TransferDetailsEntity::class,
+        TransferEntity::class,
+        VaultEntity::class
+               ],
+    version = 29,
+    exportSchema = false
+)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun stockDao(): StockDao
@@ -49,20 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun transferDao(): TransferDao
     abstract fun returnedDetailsDao(): ReturnedDetailsDao
 
-    companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
+    abstract fun vaultDoa(): VaultDao
 
-        fun getDatabase(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "sales_database"
-                ).fallbackToDestructiveMigration().build() // السطر ده هيمنع الـ Crash وهيمسح الداتا القديمة.build()
-                INSTANCE = instance
-                instance
-            }
-        }
-    }
+
 }

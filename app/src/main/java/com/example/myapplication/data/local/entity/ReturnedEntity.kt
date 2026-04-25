@@ -8,8 +8,8 @@ import kotlinx.datetime.LocalDate
 @Entity(tableName = "returned")
 data class ReturnedEntity(
 
-    @PrimaryKey(autoGenerate = true)
-    val id:Int,
+    @PrimaryKey()
+    val id: String,
     val customerId: Int,
     val returnedDate: String,
     val userId: String,

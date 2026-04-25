@@ -7,8 +7,9 @@ import com.example.myapplication.domin.repository.ReturnedRepo
 import kotlinx.coroutines.flow.Flow
 
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
-class GetItemHistoryUseCase(private val repository: ReturnedRepo) {
+class GetItemHistoryUseCase @Inject constructor(private val repository: ReturnedRepo) {
     operator fun invoke(customerId: Int, itemId: Int): Flow<List<ItemHistoryProjectionModel>> {
         return repository.getItemPurchaseHistory(customerId, itemId).map { it->
             it.map { item->

@@ -6,8 +6,8 @@ interface PaymentRepository {
     suspend fun processPaymentAndUpdateBalance(
         customerId: Int,
         amount: Double,
-        type: String
-    ): Boolean
+        type: String,
+        notes: String    ): Boolean
 
     suspend fun getAllPayments(): List<PaymentItem>
 }

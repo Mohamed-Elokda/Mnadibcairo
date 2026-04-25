@@ -6,11 +6,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.example.myapplication.core.scheduleSync
 import com.example.myapplication.data.local.Prefs
-import com.example.myapplication.data.local.entity.OutboundEntity
-import com.example.myapplication.domin.model.Customer
-import com.example.myapplication.domin.model.Items
+import com.example.myapplication.data.local.entity.OutboundDetailWithItemName
+import com.example.myapplication.domin.model.CustomerModel
 import com.example.myapplication.domin.model.Outbound
 import com.example.myapplication.domin.model.OutboundDetails
 import com.example.myapplication.domin.model.Resource
@@ -18,8 +16,12 @@ import com.example.myapplication.domin.model.Stock
 import com.example.myapplication.domin.repository.CustomerRepo
 import com.example.myapplication.domin.repository.OutboundRepo
 import com.example.myapplication.domin.useCase.FetchRemoteOutboundsUseCase
-import com.example.myapplication.domin.useCase.ProcessOutboundUseCase
-import com.google.android.gms.location.LocationServices
+import com.example.myapplication.domin.useCase.UpdateOutboundUseCase
+import com.example.myapplication.domin.useCase.outboundUseCases.DeleteOutboundUseCase
+import com.example.myapplication.domin.useCase.outboundUseCases.GetAllOutboundDetails
+import com.example.myapplication.domin.useCase.outboundUseCases.GetAllOutboundInvoices
+import com.example.myapplication.domin.useCase.outboundUseCases.ProcessOutboundUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,10 +29,15 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
-// OutboundViewModel.kt
-// OutboundViewModel.kt
-class OutboundViewModel(
+@HiltViewModel
+class OutboundViewModel @Inject constructor(
+
+    private val updateOutboundUseCase: UpdateOutboundUseCase,
+    private val getAllOutboundDetails: GetAllOutboundDetails,
+    private val deleteOutboundUseCase: DeleteOutboundUseCase,
+    private val getAllOutboundInvoices: GetAllOutboundInvoices,
     private val fetchRemoteUseCase: FetchRemoteOutboundsUseCase,
     private val processOutboundUseCase: ProcessOutboundUseCase,
     private val outboundRepo: OutboundRepo,
@@ -38,28 +45,36 @@ class OutboundViewModel(
 
     ) : ViewModel() {
 
-    // هذا هو المتغير الذي كان ينقصك
     private val _allInvoices = MutableLiveData<List<Outbound>>()
     val allInvoices: LiveData<List<Outbound>> = _allInvoices
 
-    // حالة المزامنة
+    private val _InvoiceDetails = MutableLiveData<List<OutboundDetailWithItemName>>()
+    val invoiceDetails: LiveData<List<OutboundDetailWithItemName>> = _InvoiceDetails
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing = _isSyncing.asStateFlow()
 
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage = _errorMessage.asSharedFlow()
-    // جلب الأصناف والعملاء (تحويل Flow إلى LiveData)
+
+
     val allItems: LiveData<List<Stock>> = outboundRepo.getAllItems().asLiveData()
-    fun allCustomers(context: Context): LiveData<List<com.example.myapplication.domin.model.Customer>> {
+    fun allCustomers(context: Context): LiveData<List<CustomerModel>> {
        return customerRepo.getAllCustomers(Prefs.getUserId(context)?:"").asLiveData() // افترضنا userId = 1
 
     }
 
     fun loadInvoices(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            // استدعاء الدالة من الـ Repo (تأكد من وجودها في OutboundRepo)
-            outboundRepo.getAllOutbounds(Prefs.getUserId(context)?:"").collect { list ->
+            getAllOutboundInvoices(Prefs.getUserId(context)?:"").collect { list ->
                 _allInvoices.postValue(list)
+            }
+        }
+    }
+
+    fun loadInvoiceDetails(outboundId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            getAllOutboundDetails(outboundId).collect { list ->
+                _InvoiceDetails.postValue(list)
             }
         }
     }
@@ -76,36 +91,33 @@ class OutboundViewModel(
             _isSyncing.value = false
         }
     }
-    // مثال سريع داخل الـ ViewModel أو الـ Repository قبل الحفظ
     fun deleteInvoice(outbound: Outbound,context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // تنفيذ عملية الحذف وإرجاع المخزن
-                outboundRepo.deleteInvoiceAndRollbackAll(outbound)
+                deleteOutboundUseCase(outbound)
 
-                // إعادة تحميل الفواتير لتحديث الجدول في الواجهة
                 loadInvoices(context)
 
                 withContext(Dispatchers.Main) {
-                    // إظهار رسالة نجاح (يمكنك استخدام SingleLiveEvent هنا)
                 }
             } catch (e: Exception) {
-                // معالجة الخطأ
             }
         }
     }
     suspend fun addCustomerQuickly(name: String,context: Context): Int {
-        val newCustomer = com.example.myapplication.domin.model.Customer(
+        val newCustomerModel = CustomerModel(
             id = 0,
             customerName = name,
-            userId = Prefs.getUserId(context)?:"", // معرف المندوب الحالي
-            CustomerNum = (1000..9999).random(),
+            userId = Prefs.getUserId(context) ?: "",
+            customerNum = (1000..9999).random(),
 
-            customerDebt = 0.0
+            customerDebt = 0.0,
+            firstCustomerDebt = 0.0,
+            updatedAt = System.currentTimeMillis()
         )
 
         // افترضنا أن Repo يعيد ID العميل الجديد بعد الحفظ
-        return customerRepo.insertCustomer(newCustomer)
+        return customerRepo.insertCustomer(newCustomerModel)
     }
     // دالة حفظ الفاتورة (التي أصلحناها سابقاً)
     private val _saveResult = MutableLiveData<Resource<Long>>()
@@ -123,16 +135,27 @@ class OutboundViewModel(
             customerRepo.syncCustomersFromServer(userId)
         }
     }
-
+    fun updateInvoice(outbound: Outbound, details: List<OutboundDetails>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                updateOutboundUseCase.execute(outbound, details)
+            } catch (e: Exception) {
+                _saveResult.postValue(Resource.Error(e.message ?: "خطأ في التحديث"))
+            }
+        }
+    }
     fun checkAndSyncItemsIfEmpty() {
         viewModelScope.launch(Dispatchers.IO) {
-            // فحص العدد في Room
+
             val count = outboundRepo.getItemsCount()
 
             if (count == 0) {
-                // الجدول فارغ، نسحب من السيرفر
                 outboundRepo.syncItemsFromServer()
             }
         }
     }
+
+
+
+
 }

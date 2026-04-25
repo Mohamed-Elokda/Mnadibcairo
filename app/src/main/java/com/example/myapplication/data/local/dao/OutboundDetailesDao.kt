@@ -10,6 +10,7 @@ import com.example.myapplication.data.local.entity.ItemsEntity
 import com.example.myapplication.data.local.entity.OutboundDetailWithItemName
 import com.example.myapplication.data.local.entity.OutboundDetailesEntity
 import com.example.myapplication.data.local.entity.OutboundEntity
+import com.example.myapplication.data.local.entity.OutboundWithDetails
 import com.example.myapplication.domin.model.OutboundDetails
 import kotlinx.coroutines.flow.Flow
 
@@ -23,50 +24,39 @@ interface OutboundDetailesDao {
     @Query("SELECT * FROM OutboundDetailes")
     fun getAllOutboundDetailes(): Flow<List<OutboundDetailesEntity>>
 
-    @Query("""
-        SELECT 
-            OutboundDetailes.itemId as itemId, 
-            IFNULL(Items.itemName, 'صنف غير معرف') as itemName, 
-            OutboundDetailes.amount as quantity, 
-            OutboundDetailes.price as price
-        FROM OutboundDetailes 
-        LEFT JOIN Items ON OutboundDetailes.itemId = Items.id
-        WHERE OutboundDetailes.outboundId = :outboundId
-    """)
-    fun getDetailsByOutboundId(outboundId: Long): Flow<List<OutboundDetailWithItemName>>
-
 
     @Query("""
     SELECT 
+        OutboundDetailes.id , 
         OutboundDetailes.itemId as itemId, 
-        'N/A' as itemName, 
+        Items.itemName as itemName, 
         OutboundDetailes.amount as quantity, 
         OutboundDetailes.price as price
     FROM OutboundDetailes 
+    INNER JOIN Items ON OutboundDetailes.itemId = Items.id
     WHERE OutboundDetailes.outboundId = :outboundId
 """)
-    suspend fun getDetailsListByOutboundId(outboundId: Long): List<OutboundDetailWithItemName>
-
-    @Query("SELECT * FROM outbounddetailes WHERE isSynced = 0 AND outboundId=:invoseId")
-    suspend fun getUnsyncedOutbounds(invoseId:Int): List<OutboundDetailesEntity>
+    fun getDetailsListByOutboundId(outboundId: String): Flow<List<OutboundDetailWithItemName>>
+    @Query("SELECT * FROM outbounddetailes WHERE outboundId = :outboundId")
+    suspend fun getUnsyncedOutbounds(outboundId: String): List<OutboundDetailesEntity>
 
     @Query("UPDATE outbounddetailes SET isSynced = 1 WHERE id = :id")
-    suspend fun markAsSynced(id: Int)
+    suspend fun markAsSynced(id: String)
 
 
     @Query("DELETE FROM OutboundDetailes WHERE outboundId = :outboundId")
-    suspend fun deleteDetailsByOutboundId(outboundId: Long)
+    suspend fun deleteDetailsByOutboundId(outboundId: String)
 
     @Query("SELECT * FROM OutboundDetailes WHERE outboundId = :outboundId")
-    suspend fun getDetailsByOutboundIdStatic(outboundId: Long): List<OutboundDetails>
+    suspend fun getDetailsByOutboundIdStatic(outboundId: String): List<OutboundDetailesEntity>
 
     @Query("""
     SELECT DISTINCT i.* FROM items i
     INNER JOIN OutboundDetailes od ON i.id = od.itemId
     INNER JOIN Outbound o ON od.outboundId = o.id
-    WHERE o.customerId = :customerId
+   
 """)
-    fun getItemsBoughtByCustomer(customerId: Int): Flow<List<ItemsEntity>>
+    fun getItemsBoughtByCustomer(): Flow<List<ItemsEntity>>
 
     // استعلام إضافي لجلب سعر آخر عملية بيع لهذا الصنف لهذا العميل
     @Query("""

@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.myapplication.data.local.entity.InboundDetailWithItemName
 import com.example.myapplication.data.local.entity.InboundDetailesEntity
+import com.example.myapplication.data.local.entity.OutboundDetailesEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -18,7 +19,8 @@ interface InboundDetailesDao {
     suspend fun insertInboundDetailsList(details: List<InboundDetailesEntity>)
     @Query("SELECT * FROM InboundDetailes")
     fun getAllInboundDetailes(): Flow<List<InboundDetailesEntity>>
-
+    @Query("SELECT * FROM inbounddetailes WHERE InboundId = :InboundId")
+    suspend fun getDetailsByOutboundIdStatic(InboundId: String): List<InboundDetailesEntity>
     @Query("SELECT * FROM InboundDetailes WHERE isSynced = 0")
     suspend fun getUnsyncedDetails(): List<InboundDetailesEntity>
     @Query("""
@@ -31,10 +33,10 @@ interface InboundDetailesDao {
         LEFT JOIN Items ON InboundDetailes.ItemId = Items.id
         WHERE InboundDetailes.InboundId = :inboundId
     """)
-    fun getDetailsByInboundId(inboundId: Long): Flow<List<InboundDetailWithItemName>>
+    fun getDetailsByInboundId(inboundId: String): Flow<List<InboundDetailWithItemName>>
 
     @Query("SELECT * FROM InboundDetailes WHERE InboundId = :inboundId")
-    suspend fun getDetailsByInboundIdSync(inboundId: Int): List<InboundDetailesEntity>
+    suspend fun getDetailsByInboundIdSync(inboundId: String): List<InboundDetailesEntity>
 
     @Query("DELETE FROM InboundDetailes WHERE InboundId = :inboundId")
-    suspend fun deleteDetailsByInboundId(inboundId: Long)}
+    suspend fun deleteDetailsByInboundId(inboundId: String)}

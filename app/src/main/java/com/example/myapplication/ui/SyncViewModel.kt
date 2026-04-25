@@ -1,27 +1,35 @@
 package com.example.myapplication.ui
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.myapplication.data.local.Prefs
 import com.example.myapplication.data.repository.InboundRepositoryImpl
+import com.example.myapplication.data.repository.TransferRepositoryImpl
 import com.example.myapplication.domin.repository.CustomerRepo
+import com.example.myapplication.domin.repository.ITransferRepository
 import com.example.myapplication.domin.repository.OutboundRepo
 import com.example.myapplication.domin.repository.ReturnedRepo
 import com.example.myapplication.domin.repository.StockRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
-class SyncViewModel(
+import javax.inject.Inject
+@HiltViewModel
+class SyncViewModel @Inject constructor(
     private val customerRepo: CustomerRepo,
     private val outboundRepo: OutboundRepo,
     private val returnedRepo: ReturnedRepo,
     private val stockRepo: StockRepository,
-    private val userId: String,
+    private val transferRepository: ITransferRepository,
+    @ApplicationContext private val context: Context,
     private val inbound: InboundRepositoryImpl,
 
-) : ViewModel() {
-
+    ) : ViewModel() {
+    private val userId: String = Prefs.getUserId(context) ?: ""
     private val _syncStatus = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncStatus = _syncStatus.asStateFlow()
 
@@ -54,6 +62,10 @@ class SyncViewModel(
                 // 4. جلب فواتير المرتجعات
                 _syncStatus.value = SyncState.Progress("جاري تحميل فواتير المرتجعات...")
                 returnedRepo.syncReturnsFromServer(userId)
+
+                // 4. جلب فواتير المرتجعات
+                _syncStatus.value = SyncState.Progress("جاري تحميل فواتير الاخراج...")
+                transferRepository.syncTransferFromServer(userId)
 
 
                 _syncStatus.value = SyncState.Progress("جاري تحميل فواتير  الوارد...")

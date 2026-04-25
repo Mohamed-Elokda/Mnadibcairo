@@ -1,8 +1,9 @@
 package com.example.myapplication.domin.useCase
 
 import com.example.myapplication.domin.repository.OutboundRepo
+import javax.inject.Inject
 
-class FetchRemoteOutboundsUseCase(
+class FetchRemoteOutboundsUseCase @Inject constructor(
     private val repository: OutboundRepo
 ) {
     suspend operator fun invoke(userId: String): Result<Unit> {

@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class InboundDto(
-    val id: Int,
+    val id: String,
     val user_id:String,
     val fromSupplied_id: Int,
     val invose_id:Int,

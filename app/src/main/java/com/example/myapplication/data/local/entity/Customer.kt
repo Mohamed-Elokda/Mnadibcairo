@@ -9,9 +9,12 @@ data class Customer(
     val id: Int,
     val userId: String,
     val customerName: String,
-    val CustomerNum: Int,
+    val customerNum: Int,
     val customerDebt: Double,
+    val firstCustomerDebt: Double,
+    val isSync: Boolean,
+    val updatedAt: Long?
 
-    val isSync: Boolean
+) {
 
-)
+}

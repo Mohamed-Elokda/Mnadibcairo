@@ -20,47 +20,18 @@ import com.example.myapplication.domin.useCase.GetCustomerItemsUseCase
 import com.example.myapplication.domin.useCase.GetItemHistoryUseCase
 import com.example.myapplication.domin.useCase.GetLastPriceUseCase
 import com.example.myapplication.domin.useCase.GetReturnedDetailsUseCase
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-
+@AndroidEntryPoint
 class ReturnedDetailsActivity : AppCompatActivity() {
 
-    private val viewModel: ReturnedViewModel by viewModels {
-        val database = AppDatabase.getDatabase(this)
-        val repository = ReturnedRepoImpl(
-            database,
-            database.returnedDao(),
-            database.returnedDetailsDao(),
-            database.outboundDetailesDao(),
-            database.customerDao(),
-            database.stockDao()
-        )
-        val addUseCase = AddReturnedUseCase(repository)
-        val customerRepo = CustomerRepoImpl(database.customerDao())
-        val getAllReturnedUseCase = GetAllReturnedUseCase(repository)
-        val getAllCustomersUseCase = GetAllCustomersUseCase(customerRepo)
-        val getCustomerItemsUseCase = GetCustomerItemsUseCase(repository)
-        val getLastPriceUseCase = GetLastPriceUseCase(repository)
-        val getReturnedDetailsUseCase = GetReturnedDetailsUseCase(repository)
-        val getItemHistoryUseCas = GetItemHistoryUseCase(repository)
-
-
-        // تأكد أن الـ Factory يستقبل الـ UseCases الجديدة التي صممناها
-        ReturnedViewModelFactory(
-            getCustomerItemsUseCase,
-            getLastPriceUseCase,
-            getAllReturnedUseCase,
-            getReturnedDetailsUseCase,
-            addUseCase,
-            getAllCustomersUseCase,
-            getItemHistoryUseCas
-        )
-    }
+    private val viewModel: ReturnedViewModel by viewModels ()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_returned_details)
 
-        val returnedId = intent.getIntExtra("RETURNED_ID", -1)
+        val returnedId = intent.getStringExtra("RETURNED_ID")?:""
         val customerName = intent.getStringExtra("CUSTOMER_NAME") ?: "غير معروف"
         val date = intent.getStringExtra("DATE") ?: ""
 
@@ -74,7 +45,7 @@ class ReturnedDetailsActivity : AppCompatActivity() {
         rv.adapter = adapter
 
         // جلب البيانات
-        if (returnedId != -1) {
+        if (returnedId.isNotEmpty()) {
             lifecycleScope.launch {
                 viewModel.loadReturnedDetails(returnedId) // تأكد من إضافة هذه الدالة في الـ ViewModel
                 viewModel.returnedDetails.collect { details ->

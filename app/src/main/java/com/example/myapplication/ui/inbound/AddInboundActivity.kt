@@ -1,11 +1,19 @@
 package com.example.myapplication.ui.inbound
 
+import android.annotation.SuppressLint
+import android.graphics.Color
+import android.graphics.Rect
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.Gravity
+import android.view.View
 import android.widget.*
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
@@ -20,14 +28,17 @@ import com.example.myapplication.domin.model.Inbound
 import com.example.myapplication.domin.model.InboundDetails
 import com.example.myapplication.domin.model.Items
 import com.example.myapplication.domin.model.SuppliedModel
-import com.example.myapplication.domin.useCase.AddInboundUseCase
-import com.example.myapplication.domin.useCase.GetInboundDetailsUseCase
+import com.example.myapplication.domin.useCase.inboundUseCases.AddInboundUseCase
+import com.example.myapplication.domin.useCase.inboundUseCases.GetInboundDetailsUseCase
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
+@AndroidEntryPoint
 class AddInboundActivity : AppCompatActivity() {
 
     // القوائم والبيانات
@@ -47,30 +58,45 @@ class AddInboundActivity : AppCompatActivity() {
     private var isEditMode = false
     private var selectedFromSuppliedId: Int = -1
     private var selectedToSuppliedId: Int = -1
-    private var editInboundId: Long = -1
+    private var editInboundId: String = ""
     private var originalDate: String? = null
+    private var SUPPLIER: String? = null
     private var isDataLoaded = false
+    private lateinit var invoiceScrollView: ScrollView // تعريف المتغير
+    private val viewModel: InboundViewModel by viewModels()
 
-    private val viewModel: InboundViewModel by viewModels {
-        val database = AppDatabase.getDatabase(this)
-        val repo = InboundRepositoryImpl(
-            database.inboundDao(),
-            database.inboundDetailesDao(),
-            database.stockDao(),
-            database.suppliedDao(),
-            itemsDao = database.itemsDao()
-        )
-        val getInboundDetailsUseCase = GetInboundDetailsUseCase(repo)
-        InboundViewModelFactory(AddInboundUseCase(repo), getInboundDetailsUseCase, repo)
-    }
-
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_inbound)
-
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.mainadd)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
         // 1. ربط العناصر بالـ XML أولاً
         initViews()
+        val mainLayout = findViewById<ConstraintLayout>(R.id.mainadd)
+        val keyboardSpace = findViewById<View>(R.id.keyboardSpace)
 
+        mainLayout.viewTreeObserver.addOnGlobalLayoutListener {
+            val r = Rect()
+            mainLayout.getWindowVisibleDisplayFrame(r)
+            val screenHeight = mainLayout.rootView.height
+            val keypadHeight = screenHeight - r.bottom
+
+            // إذا كان الكيبورد مفتوحاً (أكثر من 200 بكسل)
+            if (keypadHeight > 200) {
+                val params = keyboardSpace.layoutParams
+                params.height = keypadHeight - 200 // نعطي مساحة مساوية للكيبورد
+                keyboardSpace.layoutParams = params
+            } else {
+                // إرجاع المساحة للصفر عند إغلاق الكيبورد
+                val params = keyboardSpace.layoutParams
+                params.height = 0
+                keyboardSpace.layoutParams = params
+            }
+        }
         // 2. تصفية البيانات القديمة
         tempItemsList.clear()
 
@@ -79,10 +105,14 @@ class AddInboundActivity : AppCompatActivity() {
 
         isEditMode = intent.getBooleanExtra("EDIT_MODE", false)
         if (isEditMode) {
-            editInboundId = intent.getLongExtra("INBOUND_ID", -1)
+            editInboundId = intent.getStringExtra("INBOUND_ID")?: UUID.randomUUID().toString()
+            SUPPLIER = intent.getStringExtra("suppliedName")
+            selectedFromSuppliedId = intent.getIntExtra("SUPPLIER",-1)
             originalDate = intent.getStringExtra("DATE")
+            autoFromSupplied.setText(SUPPLIER)
             setupEditMode()
         }
+        Log.d("TAG", "onCreate: "+isEditMode)
 
         findViewById<Button>(R.id.btnAddItem).setOnClickListener { checkAndAddItem() }
         findViewById<Button>(R.id.btnSave).setOnClickListener { saveFullInvoice() }
@@ -95,7 +125,7 @@ class AddInboundActivity : AppCompatActivity() {
         autoItem = findViewById(R.id.autoItem)
         etQuantity = findViewById(R.id.etQuantity)
         tableItems = findViewById(R.id.tableItems)
-
+        invoiceScrollView = findViewById(R.id.invoiceScrollView) // الربط
 
 
         // ربط الـ AutoComplete الخاص بالمخازن
@@ -181,7 +211,6 @@ class AddInboundActivity : AppCompatActivity() {
         // مراقبة المخازن (Supplied) وملء القوائم
         // داخل setupObservers في AddInboundActivity
         viewModel.allSupplied.observe(this) { suppliedList ->
-            Log.d("DEBUG_DATA", "Supplied List Size: ${suppliedList.size}")
 
             if (suppliedList.isNotEmpty() && ::autoFromSupplied.isInitialized) {
                 // إنشاء Adapter جديد
@@ -220,7 +249,7 @@ class AddInboundActivity : AppCompatActivity() {
         }
 
         val inbound = Inbound(
-            id = if (isEditMode) editInboundId.toInt() else 0,
+            id = if (isEditMode) editInboundId else UUID.randomUUID().toString(),
             userId = Prefs.getUserId(this) ?: "",
             fromSppliedId = selectedFromSuppliedId,
             image = "",
@@ -261,11 +290,13 @@ class AddInboundActivity : AppCompatActivity() {
 
             for (detailWithItem in value) {
                 val detail = InboundDetails(
-                    id = 0, // نتركه 0 لأننا في الـ Repo نقوم بحذف القديم وإضافة الجديد
-                    InboundId = editInboundId.toInt(),
+                    id = UUID.randomUUID()
+                        .toString(), // نتركه 0 لأننا في الـ Repo نقوم بحذف القديم وإضافة الجديد
+                    InboundId = editInboundId,
                     ItemId = detailWithItem.itemId.toInt(),
                     amount = detailWithItem.quantity,
-                    userId = Prefs.getUserId(this@AddInboundActivity) ?: ""
+                    userId = Prefs.getUserId(this@AddInboundActivity) ?: "",
+                    updated_at = System.currentTimeMillis(),
                 )
                 tempItemsList.add(detail)
                 addTableRow(detail, detailWithItem.itemName)
@@ -291,12 +322,14 @@ class AddInboundActivity : AppCompatActivity() {
         }
 
         val detail = InboundDetails(
-            id = 0,
-            InboundId = if (isEditMode) editInboundId.toInt() else 0,
+            id = UUID.randomUUID().toString(),
+            InboundId = if (isEditMode) editInboundId else UUID.randomUUID().toString(),
             ItemId = selectedItem!!.id,
             amount = result.toInt(),
-            userId = Prefs.getUserId(this@AddInboundActivity) ?: ""
-        )
+            userId = Prefs.getUserId(this@AddInboundActivity) ?: "",
+            updated_at = System.currentTimeMillis(),
+
+            )
 
         tempItemsList.add(detail)
         addTableRow(detail, selectedItem!!.itemName)
@@ -315,32 +348,79 @@ class AddInboundActivity : AppCompatActivity() {
 
     private fun addTableRow(itemData: InboundDetails, selectName: String) {
         val row = TableRow(this).apply {
-            setPadding(8, 16, 8, 16)
-            gravity = Gravity.CENTER_VERTICAL
+            setPadding(4, 8, 4, 8)
+            background = getDrawable(android.R.drawable.editbox_dropdown_light_frame) // خلفية بسيطة للصف
         }
 
+        // 1. اسم الصنف
         row.addView(TextView(this).apply {
             text = selectName
+            textSize = 14f
+            setPadding(10, 10, 10, 10)
             layoutParams = TableRow.LayoutParams(0, -2, 1.2f)
         })
 
-        row.addView(TextView(this).apply {
-            text = itemData.amount.toString()
+        // 2. كمية قابلة للتعديل (EditText)
+        val etQty = EditText(this).apply {
+            setText(itemData.amount.toString())
+            inputType = InputType.TYPE_CLASS_NUMBER
             gravity = Gravity.CENTER
+            background = null // إزالة الخط السفلي لتصميم أنظف
+            setPadding(10, 10, 10, 10)
             layoutParams = TableRow.LayoutParams(0, -2, 0.5f)
-        })
 
+            // تحديث القيمة في القائمة عند التغيير
+            addTextChangedListener { text ->
+                val newQty = text.toString().toIntOrNull() ?: 0
+                itemData.amount = newQty // تحديث الكائن مباشرة في tempItemsList
+            }
+            setOnClickListener {
+
+                // نستخدم postDelayed عشان ندي وقت للكيبورد يظهر والـ Layout يتعدل
+                invoiceScrollView.postDelayed({
+                    // حساب المسافة: نريد الصف أن يكون في أعلى الـ ScrollView
+                    // row.top تعطيك مكانه بالنسبة للـ Table
+                    // ونطرح منها مساحة بسيطة (مثلاً 100 بكسل) عشان ما يلزقش في السقف
+                    val scrollTarget = row.top+500
+
+                    invoiceScrollView.smoothScrollTo(0, scrollTarget)
+
+                    // لزيادة التأكيد، اطلب من الحقل "طلب التركيز" برمجياً
+                }, 400) // 500ms تضمن إن الكيبورد أخد مساحته تماماً
+            }
+
+            setOnFocusChangeListener { view, hasFocus ->
+                if (hasFocus) {
+                    // نستخدم postDelayed عشان ندي وقت للكيبورد يظهر والـ Layout يتعدل
+                    invoiceScrollView.postDelayed({
+                        // حساب المسافة: نريد الصف أن يكون في أعلى الـ ScrollView
+                        // row.top تعطيك مكانه بالنسبة للـ Table
+                        // ونطرح منها مساحة بسيطة (مثلاً 100 بكسل) عشان ما يلزقش في السقف
+                        val scrollTarget = row.top+500
+
+                        invoiceScrollView.smoothScrollTo(0, scrollTarget)
+
+                        // لزيادة التأكيد، اطلب من الحقل "طلب التركيز" برمجياً
+                        view.requestFocus()
+                    }, 500) // 500ms تضمن إن الكيبورد أخد مساحته تماماً
+                }
+            }
+        }
+        row.addView(etQty)
+
+        // 3. زر الحذف
         row.addView(ImageButton(this).apply {
-            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            setImageResource(android.R.drawable.ic_menu_delete)
             background = null
+            setColorFilter(Color.RED)
             setOnClickListener {
                 tableItems.removeView(row)
-                tempItemsList.remove(itemData) // التأكد من حذف البيانات الفعلية
+                tempItemsList.remove(itemData)
             }
         })
+
         tableItems.addView(row)
     }
-
     private fun getCurrentDate(): String {
         return SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).format(Date())
     }

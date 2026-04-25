@@ -15,7 +15,7 @@ interface ReturnedDetailsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertReturnedDetailsList(details: List<ReturnedDetailsEntity>)
     @Query("select * from returnedDetails where returnedId=:returnedId")
-     fun getAllReturnedDetails(returnedId:Int): Flow<List<ReturnedDetailsEntity>>
+     fun getAllReturnedDetails(returnedId: String): Flow<List<ReturnedDetailsEntity>>
 
     @Query("""
         SELECT 
@@ -25,8 +25,18 @@ interface ReturnedDetailsDao {
         JOIN items i ON rd.itemId = i.id
         WHERE rd.returnedId = :returnedId
     """)
-    fun getDetailsByReturnedId(returnedId: Int): Flow<List<ReturnedDetailsWithItem>>
+    fun getDetailsByReturnedId(returnedId: String): Flow<List<ReturnedDetailsWithItem>>
 
     @Query("SELECT * FROM returnedDetails WHERE returnedId = :returnId")
-    suspend fun getDetailsByReturnId(returnId: Int): List<ReturnedDetailsEntity>
+    suspend fun getDetailsByReturnId(returnId: String): List<ReturnedDetailsEntity>
+
+
+    @Query("SELECT * FROM returnedDetails WHERE returnedId = :returnedId")
+    suspend fun getReturnedDetailsStatic(returnedId: String): List<ReturnedDetailsEntity>
+
+    @Query("DELETE FROM returnedDetails WHERE returnedId = :returnedId")
+    suspend fun deleteReturnedDetails(returnedId: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertReturnedDetails(details: List<ReturnedDetailsEntity>)
     }

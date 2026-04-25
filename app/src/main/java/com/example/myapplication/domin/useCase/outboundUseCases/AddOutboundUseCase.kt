@@ -1,10 +1,11 @@
-package com.example.myapplication.domin.useCase
+package com.example.myapplication.domin.useCase.outboundUseCases
 
 import com.example.myapplication.domin.model.Outbound
 import com.example.myapplication.domin.model.OutboundDetails
 import com.example.myapplication.domin.repository.OutboundRepo
+import javax.inject.Inject
 
-class AddOutboundUseCase(private val repository: OutboundRepo) {
+class AddOutboundUseCase @Inject constructor(private val repository: OutboundRepo) {
     suspend operator fun invoke(
         outbound: Outbound,
         details: List<OutboundDetails>,

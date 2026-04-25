@@ -14,8 +14,9 @@ import com.example.myapplication.R
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.repository.StatementRepoImpl
 import com.example.myapplication.domin.useCase.GetCustomerStatementUseCase
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-
+@AndroidEntryPoint
 class CustomerStatementActivity : AppCompatActivity() {
 
     private lateinit var statementAdapter: StatementAdapter
@@ -23,18 +24,7 @@ class CustomerStatementActivity : AppCompatActivity() {
     private lateinit var tvCustomerName: TextView
 
     // 1. إكمال تعريف الـ ViewModel مع الـ Factory
-    private val viewModel: StatementViewModel by viewModels {
-        val database = AppDatabase.getDatabase(this)
-        val repo = StatementRepoImpl(
-            outboundDao = database.outboundDao(),
-            paymentDao = database.PaymentDao(),
-            returnedDao = database.returnedDao(),
-            outboundDetailsDao = database.outboundDetailesDao(),
-            returnedDetailsDao = database.returnedDetailsDao(),
-            itemsDao = database.itemsDao()
-        )
-        StatementViewModelFactory(GetCustomerStatementUseCase(repo))
-    }
+    private val viewModel: StatementViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

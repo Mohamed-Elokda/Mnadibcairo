@@ -6,10 +6,10 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "Transfer")
 data class TransferEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
+    @PrimaryKey()
+    val id: String = java.util.UUID.randomUUID().toString(),
     val transferNum: Int,      // رقم عملية المناقلة
-    val fromStoreId: Int,      // المخزن الذي خرجت منه المواد
+    val fromStoreId: String,      // المخزن الذي خرجت منه المواد
     val toStoreId: Int,        // المخزن الذي استلم المواد
     val userId: String,
     val date: String,

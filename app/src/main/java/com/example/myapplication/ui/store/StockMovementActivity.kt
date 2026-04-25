@@ -12,16 +12,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.RecyclerView
 import com.example.myapplication.R
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-
+@AndroidEntryPoint
 class StockMovementActivity : AppCompatActivity() {
 
     // تعريف الـ ViewModel (يفترض وجود DI أو Factory)
     // سأستخدم التوصيف البسيط هنا، تأكد من إعداد الـ ViewModelProvider.Factory إذا لم تكن تستخدم Hilt
-    private val viewModel: StockMovementViewModel by viewModels {
-        StockMovementViewModelFactory(application) // تأكد من إنشاء الـ Factory الخاص بك
-    }
-
+    private val viewModel: StockMovementViewModel by viewModels ()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

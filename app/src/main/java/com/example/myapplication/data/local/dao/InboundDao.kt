@@ -8,6 +8,8 @@ import androidx.room.Query
 import com.example.myapplication.data.local.entity.InboundEntity
 import com.example.myapplication.data.local.entity.InboundWithSupplier
 import com.example.myapplication.data.local.entity.ItemMovementProjection
+import com.example.myapplication.data.local.entity.OutboundEntity
+import com.example.myapplication.domin.model.ItemQuantity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -17,6 +19,11 @@ interface InboundDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertInboundList(inbounds: List<InboundEntity>)
+
+    @Query("SELECT * FROM inbound ")
+    suspend fun getAllOutbound(): List<InboundEntity>
+
+
 
     @Query("""
     SELECT 
@@ -36,7 +43,7 @@ interface InboundDao {
 """)
     fun getAllInboundWithSupplierName(userId: String): Flow<List<InboundWithSupplier>>
 
-    @Query("SELECT * FROM Inbound WHERE isSynced = 0")
+    @Query("SELECT * FROM Inbound")
     suspend fun getUnsyncedInbounds(): List<InboundEntity>
     @Query("""
         SELECT 
@@ -55,7 +62,16 @@ interface InboundDao {
 
     @Delete
     suspend fun delete(inbound: InboundEntity)
+    @Query("""
+        SELECT ItemId as itemId, SUM(amount) as totalQty 
+        FROM inbounddetailes 
+        GROUP BY ItemId
+    """)
+    fun getAllInboundQtyByItem(): Flow<List<ItemQuantity>>
 
+    // لو حابب تجيبها لصنف واحد فقط (اختياري)
+    @Query("SELECT SUM(amount) FROM inbounddetailes WHERE ItemId = :itemId")
+    fun getTotalInboundByItem(itemId: Int): Flow<Int?>
     @Query("SELECT * FROM Inbound WHERE id = :id LIMIT 1")
-    fun getInboundByIdSync(id: Int): InboundEntity?
+    fun getInboundByIdSync(id: String): InboundEntity?
 }

@@ -26,6 +26,7 @@ import com.example.myapplication.data.repository.OutboundRepoImpl
 import com.example.myapplication.data.repository.ReturnedRepoImpl
 import com.example.myapplication.data.repository.StockRepoImpl
 import com.example.myapplication.domin.repository.StockRepository
+import com.example.myapplication.ui.customerState.CustomersActivity
 import com.example.myapplication.ui.inbound.AddInboundActivity
 import com.example.myapplication.ui.inbound.InboundActivity
 import com.example.myapplication.ui.payment.PaymentActivity
@@ -34,11 +35,12 @@ import com.example.myapplication.ui.store.StoresActivity
 import com.example.myapplication.ui.transfer.TransferActivity
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.android.material.card.MaterialCardView
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private val generativeModel by lazy {
         GenerativeModel(
@@ -54,19 +56,11 @@ class MainActivity : AppCompatActivity() {
         // 1. تهيئة العناصر
         val loadingOverlay = findViewById<FrameLayout>(R.id.loadingOverlay)
         val tvSyncStatus = findViewById<TextView>(R.id.tvSyncStatus)
-        val database = AppDatabase.getDatabase(this)
         val userId = Prefs.getUserId(this) ?: ""
 
         // 2. تهيئة الـ Repositories والـ ViewModel
-        val customerRepo = CustomerRepoImpl(database.customerDao())
-        val cStockRepo = StockRepoImpl(database.inboundDao(),database.outboundDao(),database.returnedDao(),database.stockDao())
-        val outboundRepo = OutboundRepoImpl(database.outboundDao(), database.outboundDetailesDao(), database.stockDao(), database.itemsDao(), database.customerDao())
-        val returnedRepo = ReturnedRepoImpl(database, database.returnedDao(), database.returnedDetailsDao(), database.outboundDetailesDao(), database.customerDao(), database.stockDao())
-        val iboundRepo = InboundRepositoryImpl( database.inboundDao(), database.inboundDetailesDao(), database.stockDao(), database.suppliedDao(),database.itemsDao())
 
-        val syncViewModel: SyncViewModel by viewModels {
-            SyncViewModelFactory(customerRepo, outboundRepo, returnedRepo, cStockRepo,userId,iboundRepo)
-        }
+        val syncViewModel: SyncViewModel by viewModels ()
 
         // 3. مراقبة حالة المزامنة
         lifecycleScope.launch {

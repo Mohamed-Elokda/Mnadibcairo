@@ -5,8 +5,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class InboundDetailsDto (
-    val id: Int,
-    val inbound_id:Int,
+    val id: String,
+    val inbound_id: String,
     val item_id:Int,
     val amount:Int,
     val updated_at: Long? = null // ستقوم Supabase بتعبئته تلقائياً عند الجلب

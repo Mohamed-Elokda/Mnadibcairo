@@ -6,9 +6,9 @@ import androidx.room.PrimaryKey
 
 @Entity("InboundDetailes")
 data class InboundDetailesEntity (
-    @PrimaryKey(autoGenerate = true)
-    val id: Int,
-    val InboundId:Int,
+    @PrimaryKey()
+    val id: String=java.util.UUID.randomUUID().toString(),
+    val InboundId: String,
     val ItemId: Int,
     val amount:Int,
     val isSynced: Boolean=false,

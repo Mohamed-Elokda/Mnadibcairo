@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.ui.MainActivity
@@ -17,12 +18,13 @@ import kotlinx.coroutines.launch
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.myapplication.data.local.Prefs
-import com.example.myapplication.data.remote.manager.supabase
 import com.example.myapplication.data.repository.UserRepository
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
 
-    private lateinit var viewModel: LoginViewModel
+    private  val viewModel: LoginViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,15 +38,9 @@ class LoginActivity : AppCompatActivity() {
         }
 
         // 2. تجهيز الـ Repository والـ Factory
-        val repository = UserRepository(supabase)
-        val factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return LoginViewModel(repository) as T
-            }
-        }
+
 
         // 3. تعريف الـ ViewModel (هذا السطر يجب أن يسبق أي استخدام للـ viewModel)
-        viewModel = ViewModelProvider(this, factory)[LoginViewModel::class.java]
 
         // الآن يمكنك تعريف العناصر والـ Listeners
         val etUsername = findViewById<EditText>(R.id.etEmail)

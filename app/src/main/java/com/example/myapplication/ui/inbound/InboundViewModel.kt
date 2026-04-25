@@ -12,11 +12,14 @@ import com.example.myapplication.domin.model.InboundDetails
 import com.example.myapplication.domin.model.Items
 import com.example.myapplication.domin.model.SuppliedModel
 import com.example.myapplication.domin.repository.IInboundRepository
-import com.example.myapplication.domin.useCase.AddInboundUseCase
-import com.example.myapplication.domin.useCase.GetInboundDetailsUseCase
+import com.example.myapplication.domin.useCase.inboundUseCases.AddInboundUseCase
+import com.example.myapplication.domin.useCase.inboundUseCases.GetInboundDetailsUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class InboundViewModel(
+@HiltViewModel
+class InboundViewModel @Inject constructor(
     private val addInboundUseCase: AddInboundUseCase,
     private val getInboundDetailsUseCase: GetInboundDetailsUseCase, // أضفه هنا
     private val repository: IInboundRepository // ستحتاجه لباقي الدوال
@@ -42,7 +45,7 @@ class InboundViewModel(
             }
         }
     }
-    fun getInboundDetails(inboundId: Long): LiveData<List<InboundDetailWithItemName>> {
+    fun getInboundDetails(inboundId: String): LiveData<List<InboundDetailWithItemName>> {
         return getInboundDetailsUseCase(inboundId).asLiveData()
     }
     fun deleteInboundWithDetails(inbound: Inbound) {

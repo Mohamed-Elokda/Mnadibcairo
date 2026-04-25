@@ -13,19 +13,20 @@ import java.util.concurrent.TimeUnit
 import androidx.work.Constraints
 
 fun scheduleSync(context: Context) {
-    // 1. تحديد القيود (الإنترنت فقط)
+    // 1. القيود: لازم يكون فيه إنترنت
     val constraints = Constraints.Builder()
         .setRequiredNetworkType(NetworkType.CONNECTED)
         .build()
 
-    // 2. إنشاء طلب المهمة (مرة واحدة OneTime)
-    val periodicSyncRequest = OneTimeWorkRequestBuilder<SyncWorker>(
-    )
+    // 2. إنشاء الطلب (OneTime)
+    val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
         .setConstraints(constraints)
-.build()
+        .build()
 
-    // 3. إرسال المهمة للـ WorkManager كـ "UniqueWork" لضمان عدم تكرار المهمة
-    WorkManager.getInstance(context).enqueue(
-        periodicSyncRequest
+    // 3. الإرسال كـ "Unique Work" (الحل السحري)
+    WorkManager.getInstance(context).enqueueUniqueWork(
+        "MnadibCairoSync", // اسم فريد للمهمة
+        ExistingWorkPolicy.REPLACE, // لو فيه مهمة قديمة مستنية، استبدلها بالجديدة
+        syncRequest
     )
 }

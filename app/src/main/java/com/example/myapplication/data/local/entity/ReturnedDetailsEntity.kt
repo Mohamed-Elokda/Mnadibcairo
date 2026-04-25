@@ -6,9 +6,9 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "returnedDetails")
 data class ReturnedDetailsEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Int,
-    val returnedId:Int,
+    @PrimaryKey()
+    val id: String,
+    val returnedId: String,
     val itemId:Int,
     val amount:Int,
     val price: Double,

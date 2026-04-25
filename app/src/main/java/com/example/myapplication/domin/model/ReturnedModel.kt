@@ -4,13 +4,13 @@ import kotlinx.datetime.LocalDate
 
 data class ReturnedModel(
 
-    val id:Int,
+    val id: String,
     val customerId: Int,
-    val itemId:Int,
     val returnedDate: String,
     val userId: String,
     val latitude: Double,
-    val longitude: Double
+    val longitude: Double,
+    val updateAt: Long
 
 
 

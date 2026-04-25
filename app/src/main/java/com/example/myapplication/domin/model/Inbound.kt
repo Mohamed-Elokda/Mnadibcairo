@@ -3,7 +3,7 @@ package com.example.myapplication.domin.model
 
 
 data class Inbound (
-    val id:Int,
+    val id: String,
     val invorseNum:Int,
     val userId: String,
     val fromSppliedId: Int,

@@ -5,29 +5,54 @@ import com.example.myapplication.data.local.dao.InboundDao
 import com.example.myapplication.data.local.dao.OutboundDao
 import com.example.myapplication.data.local.dao.ReturnedDao
 import com.example.myapplication.data.local.dao.StockDao
+import com.example.myapplication.data.local.dao.TransferDao
+import com.example.myapplication.data.remote.dto.OutboundDto
 import com.example.myapplication.data.remote.dto.StockDto
-import com.example.myapplication.data.remote.manager.supabase
 import com.example.myapplication.data.toDomain
 import com.example.myapplication.data.toEntity
 import com.example.myapplication.domin.model.ItemMovement
 import com.example.myapplication.domin.model.Stock
 import com.example.myapplication.domin.repository.StockRepository
+import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
-class StockRepoImpl(
+class StockRepoImpl @Inject constructor(
+    private val supabase: SupabaseClient,
     private val inboundDao: InboundDao,
     private val outboundDao: OutboundDao,
     private val returnedDao: ReturnedDao,
+    private val trDto: TransferDao,
     private val stockDao: StockDao,
 
 ) : StockRepository {
 
     override fun getStockData(): Flow<List<Stock>> {
-        return stockDao.getAllStockWithNames().map { list ->
-            list.map { it.toDomain() } // تأكد من وجود دالة Mapper تحول StockEntity لـ Stock
+        return combine(
+            stockDao.getAllStockWithNames(),
+            inboundDao.getAllInboundQtyByItem(), // دالة ترجع مجموع الوارد لكل صنف
+            outboundDao.getAllOutboundQtyByItem(), // دالة ترجع مجموع الصادر لكل صنف
+            returnedDao.getAllReturnsQtyByItem(), // دالة ترجع مجموع المرتجع لكل صنف
+            trDto.getAllTransfersQtyByItem() // دالة ترجع مجموع التحويلات لكل صنف
+        ) { stocks, inbounds, outbounds, returns, transfers ->
+
+            stocks.map { entity ->
+                val itemId = entity.ItemId
+
+                // حساب الإجمالي لكل نوع حركة لهذا الصنف
+                val totalIn = inbounds.filter { it.itemId == itemId }.sumOf { it.totalQty }
+                val totalOut = outbounds.filter { it.itemId == itemId }.sumOf { it.totalQty }
+                val totalReturns = returns.filter { it.itemId == itemId }.sumOf { it.totalQty }
+                val totalTransfers = transfers.filter { it.itemId == itemId }.sumOf { it.totalQty }
+
+                // الحسبة النهائية: (رصيد أول + وارد + مرتجع) - (صادر + تحويل صادر)
+                val finalQty = (entity.InitAmount + totalIn + totalReturns) - (totalOut + totalTransfers)
+                Log.d("TAG", "getStockData: "+entity.InitAmount+"-"+totalIn +"--" +totalReturns+"-"+ totalOut +""+ totalTransfers)
+                entity.toDomain().copy(InitAmount = finalQty)
+            }
         }
     }
     // داخل OutboundRepoImpl.kt
@@ -52,8 +77,9 @@ class StockRepoImpl(
             inboundDao.getInboundByItem(itemId),
             outboundDao.getOutboundByItem(itemId),
             returnedDao.getReturnsByItem(itemId),
+            trDto.getTransferByItem(itemId),
             stockDao.getStockByItemIdFlow(itemId) // أضفنا تدفق بيانات المخزن هنا
-        ) { inbounds, outbounds, returns, stock ->
+        ) { inbounds, outbounds, returns, trDto,stock->
             val allMovements = mutableListOf<ItemMovement>()
 
             // 1. استخراج الرصيد الافتتاحي وتاريخ البدء
@@ -94,6 +120,17 @@ class StockRepoImpl(
                     documentNumber = it.documentNumber,
                     qtyIn = it.qtyIn,
                     qtyOut = 0,
+                    partyName = it.partyName,
+                    runningStock = 0
+                ))
+            }
+            trDto.forEach {
+                allMovements.add(ItemMovement(
+                    date = it.date,
+                    transactionType = it.transactionType,
+                    documentNumber = it.documentNumber,
+                    qtyIn = 0,
+                    qtyOut =it.qtyOut,
                     partyName = it.partyName,
                     runningStock = 0
                 ))

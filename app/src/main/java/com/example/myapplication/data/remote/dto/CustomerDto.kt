@@ -11,6 +11,7 @@ data class CustomerDto(
     val customer_name: String,
     val customer_num: Int,
     val customer_debt: Double,
+    val firstCustomerDebt: Double,
 
     val is_sync: Boolean,
     val updated_at: Long? = null // ستقوم Supabase بتعبئته تلقائياً عند الجلب

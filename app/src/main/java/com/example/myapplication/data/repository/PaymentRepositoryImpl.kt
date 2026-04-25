@@ -15,9 +15,10 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 import kotlin.collections.map
 
-class PaymentRepositoryImpl(
+class PaymentRepositoryImpl @Inject constructor(
     private val database: AppDatabase,
     private val paymentDao: PaymentDao,
     private val customerDao: CustomerDao
@@ -26,7 +27,8 @@ class PaymentRepositoryImpl(
     override suspend fun processPaymentAndUpdateBalance(
         customerId: Int,
         amount: Double,
-        type: String
+        type: String,
+        notes: String
     ): Boolean {
         return try {
             // استخدام Transaction لضمان سلامة البيانات
@@ -36,6 +38,7 @@ class PaymentRepositoryImpl(
                     customerId = customerId,
                     amount = amount,
                     paymentType = type,
+                    notes=notes,
                     date = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ENGLISH).format(Date())
                 )
                 paymentDao.insertPayment(payment)

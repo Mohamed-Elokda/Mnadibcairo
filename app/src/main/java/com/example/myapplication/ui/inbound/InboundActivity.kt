@@ -1,8 +1,12 @@
 package com.example.myapplication.ui.inbound
 
 import android.R.attr.padding
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -12,7 +16,12 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.myapplication.R
 import com.example.myapplication.data.formatToEnglish
 import com.example.myapplication.data.local.AppDatabase
@@ -20,154 +29,81 @@ import com.example.myapplication.data.local.Prefs
 import com.example.myapplication.data.local.dao.StockDao
 import com.example.myapplication.data.repository.InboundRepositoryImpl
 import com.example.myapplication.domin.model.Inbound
-import com.example.myapplication.domin.useCase.AddInboundUseCase
-import com.example.myapplication.domin.useCase.GetInboundDetailsUseCase
+import com.example.myapplication.domin.useCase.inboundUseCases.AddInboundUseCase
+import com.example.myapplication.domin.useCase.inboundUseCases.GetInboundDetailsUseCase
+import dagger.hilt.android.AndroidEntryPoint
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
+@AndroidEntryPoint
 class InboundActivity : AppCompatActivity() {
 
-    private lateinit var tableInbound: TableLayout
+
     // استخدم ViewModelProvider للحصول على نسخة من الـ ViewModel
     // 1. تجهيز المتطلبات (يفضل استخدام Dependency Injection مستقبلاً مثل Hilt)
-    private val viewModel: InboundViewModel by viewModels {
-        val database = AppDatabase.getDatabase(this)
-
-        // تحويل الـ DAOs إلى Repository Implementation
-        val repository = InboundRepositoryImpl(
-            database.inboundDao(),
-            database.inboundDetailesDao(),
-            database.stockDao(),
-            database.suppliedDao(),
-            database.itemsDao()
-        )
-        val getInboundDetailsUseCase = GetInboundDetailsUseCase(repository)
-
-        val addInboundUseCase = AddInboundUseCase(repository)
-
-        InboundViewModelFactory(addInboundUseCase, getInboundDetailsUseCase,repository)
-    }
-
+    private val viewModel: InboundViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_inbound)
-
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.mainadI)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            // بنخلي الـ Padding يراعي ارتفاع الـ StatusBar من فوق والـ NavigationBar من تحت
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
         val btnBack = findViewById<ImageButton>(R.id.btnBack)
         val btnAddInbound = findViewById<Button>(R.id.btnAddInbound)
         val etSearch = findViewById<EditText>(R.id.etSearch)
-        tableInbound = findViewById(R.id.tableInbound)
 
         btnBack.setOnClickListener { finish() }
 
         viewModel.getInbounds(Prefs.getUserId(this)!!).observe(this) { inboundList ->
             try {
                 displayInboundData(inboundList)
-            }catch (ex: Exception){
-                Toast.makeText(this@InboundActivity,ex.message,Toast.LENGTH_SHORT).show(  )
+            } catch (ex: Exception) {
+                Toast.makeText(this@InboundActivity, ex.message, Toast.LENGTH_SHORT).show()
             }
 
         }
-        etSearch.addTextChangedListener(object : android.text.TextWatcher {
-            override fun afterTextChanged(s: android.text.Editable?) {
+        etSearch.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
                 val query = s.toString()
-                viewModel.getInbounds(Prefs.getUserId(this@InboundActivity)!!).observe(this@InboundActivity) { list ->
-                    val filteredList = list.filter { it.invorseNum.toString().contains(query)|| it.suppliedName.toString().contains(query) }
-                    displayInboundData(filteredList)
-                }
+                viewModel.getInbounds(Prefs.getUserId(this@InboundActivity)!!)
+                    .observe(this@InboundActivity) { list ->
+                        val filteredList = list.filter {
+                            it.invorseNum.toString().contains(query) || it.suppliedName.toString()
+                                .contains(query)
+                        }
+                        displayInboundData(filteredList)
+                    }
             }
+
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
-btnAddInbound.setOnClickListener {
-    startActivity(Intent(this, AddInboundActivity::class.java))
-}
-
-
+        btnAddInbound.setOnClickListener {
+            startActivity(Intent(this, AddInboundActivity::class.java))
+        }
 
 
     }
+
     private fun displayInboundData(inboundList: List<Inbound>) {
-        // 1. مسح الصفوف القديمة مع الحفاظ على صف العنوان
-        val childCount = tableInbound.childCount
-        if (childCount > 1) {
-            tableInbound.removeViews(1, childCount - 1)
-        }
 
-        // 2. إضافة صف لكل فاتورة
-        for (inbound in inboundList) {
-            val row = TableRow(this).apply {
-                setPadding(8, 16, 8, 16) // زيادة البادنج الرأسي لتسهيل الضغط
-                background = ContextCompat.getDrawable(this@InboundActivity, android.R.drawable.list_selector_background)
-                isClickable = true
-                isFocusable = true
-            }
 
-            // رقم الفاتورة (كـ نص يظهر للمستخدم)
-            val tvId = TextView(this).apply {
+        setupRecyclerView(inboundList)
 
-                text = inbound.invorseNum.toString()
-                setPadding(8, 8, 8, 8)
-            }
-
-            // التاريخ
-            val tvDate = TextView(this).apply {
-                text = inbound.inboundDate.substringBefore("T") // لعرض التاريخ فقط بدون الوقت
-                setPadding(8, 8, 8, 8)
-            }
-
-            // اسم المورد
-            val tvSupplier = TextView(this).apply {
-                text = inbound.suppliedName.toString() // يفضل لاحقاً عمل Join لعرض الاسم بدلاً من الرقم
-                setPadding(8, 8, 8, 8)
-            }
-
-            row.addView(tvId)
-            row.addView(tvDate)
-            row.addView(tvSupplier)
-            row.setOnLongClickListener { view ->
-                showUpdateDeleteMenu(view, inbound)
-                true // تعني أننا استهلكنا الحدث ولن يتم تنفيذ النقرة العادية
-            }
-            // --- التعديل هنا: الانتقال لصفحة التفاصيل ---
-            row.setOnClickListener {
-                val intent = Intent(this, InboundDetailActivity::class.java).apply {
-                    // تمرير المعرف (ID) وهو الأهم لجلب البيانات من Room
-                    putExtra("INBOUND_ID", inbound.id.toLong())
-
-                    // تمرير البيانات المتاحة لتقليل الضغط على قاعدة البيانات في الشاشة التالية
-                    putExtra("INVOICE_NUM", inbound.invorseNum.toString())
-                    putExtra("SUPPLIER", inbound.suppliedName)
-                    putExtra("DATE", inbound.inboundDate)
-
-                    // إذا كانت بيانات الصور والمبالغ متوفرة في كائن Inbound مررها أيضاً
-                    // putExtra("IMAGE_URL", inbound.imageUrl)
-                    // putExtra("TOTAL_AMOUNT", inbound.totalAmount)
-                }
-                startActivity(intent)
-            }
-
-            tableInbound.addView(row)
-        }
     }
-    private fun openExcelFile(file: java.io.File) {
-        try {
-            val uri = androidx.core.content.FileProvider.getUriForFile(
-                this, "${packageName}.provider", file
-            )
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
-            }
-            startActivity(Intent.createChooser(intent, "فتح ملف التقرير بواسطة:"))
-        } catch (e: Exception) {
-            Toast.makeText(this, "لا يوجد تطبيق لفتح Excel", Toast.LENGTH_SHORT).show()
-        }
-    }
-    private fun showUpdateDeleteMenu(view: android.view.View, inbound: Inbound) {
-        val popup = androidx.appcompat.widget.PopupMenu(this, view)
+
+
+
+    private fun showUpdateDeleteMenu(view: View, inbound: Inbound) {
+        val popup = PopupMenu(this, view)
 
         // 1. تجهيز تاريخ اليوم بالإنجليزية
-        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ENGLISH)
-        val currentDateStr = sdf.format(java.util.Date())
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
+        val currentDateStr = sdf.format(Date())
 
         // 2. تنظيف تاريخ الفاتورة وتحويل أرقامه للإنجليزية
         val rawDate = inbound.inboundDate.substringBefore("T").trim()
@@ -188,6 +124,7 @@ btnAddInbound.setOnClickListener {
                 "تعديل" -> {
                     openEditInbound(inbound)
                 }
+
                 "حذف" -> {
                     showDeleteConfirmationDialog(inbound)
                 }
@@ -196,6 +133,39 @@ btnAddInbound.setOnClickListener {
         }
         popup.show()
     }
+
+    private fun setupRecyclerView(inboundList: List<Inbound>) {
+        val recyclerView = findViewById<RecyclerView>(R.id.rvInbound)
+
+        val adapter = InboundAdapter(
+            inboundList,
+            onItemClick = { selectedInbound ->
+
+
+                val intent = Intent(this, InboundDetailActivity::class.java).apply {
+                    putExtra("INBOUND_ID", selectedInbound.id)
+
+                    putExtra("INVOICE_NUM", selectedInbound.invorseNum.toString())
+                    putExtra("SUPPLIER", selectedInbound.suppliedName)
+                    putExtra("DATE", selectedInbound.inboundDate)
+
+
+                }
+                startActivity(intent)
+            },
+            onLongItemClick = {
+
+                showUpdateDeleteMenu(recyclerView, it)
+                return@InboundAdapter true
+            }
+        )
+
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = adapter
+
+
+    }
+
     private fun formatToEnglishDigits(input: String): String {
         var result = input
         val arabicChars = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
@@ -206,22 +176,26 @@ btnAddInbound.setOnClickListener {
         }
         return result
     }
+
     private fun openEditInbound(inbound: Inbound) {
         val intent = Intent(this, AddInboundActivity::class.java).apply {
             putExtra("EDIT_MODE", true)
-            putExtra("INBOUND_ID", inbound.id.toLong())
+            putExtra("INBOUND_ID", inbound.id)
             putExtra("INVOICE_NUM", inbound.invorseNum.toString())
-            putExtra("SUPPLIER", inbound.fromSppliedId)
+            putExtra("SUPPLIED_ID", inbound.fromSppliedId)
+            putExtra("SUPPLIER", inbound.suppliedName)
             // يمكنك تمرير باقي البيانات حسب الحاجة
         }
         startActivity(intent)
     }
+
     private fun showDeleteConfirmationDialog(inbound: Inbound) {
-        android.app.AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle("تأكيد الحذف")
             .setMessage("هل أنت متأكد من حذف الفاتورة رقم ${inbound.invorseNum}؟")
             .setPositiveButton("نعم") { _, _ ->
-                viewModel.deleteInboundWithDetails(inbound)            }
+                viewModel.deleteInboundWithDetails(inbound)
+            }
             .setNegativeButton("إلغاء", null)
             .show()
     }
