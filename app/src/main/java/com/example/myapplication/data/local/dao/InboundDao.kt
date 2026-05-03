@@ -5,10 +5,10 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.example.myapplication.data.local.entity.InboundDetailesEntity
 import com.example.myapplication.data.local.entity.InboundEntity
 import com.example.myapplication.data.local.entity.InboundWithSupplier
 import com.example.myapplication.data.local.entity.ItemMovementProjection
-import com.example.myapplication.data.local.entity.OutboundEntity
 import com.example.myapplication.domin.model.ItemQuantity
 import kotlinx.coroutines.flow.Flow
 
@@ -23,7 +23,8 @@ interface InboundDao {
     @Query("SELECT * FROM inbound ")
     suspend fun getAllOutbound(): List<InboundEntity>
 
-
+    @Query("UPDATE Inbound SET isSynced = 1 WHERE id = :id")
+    suspend fun markAsSynced(id: String)
 
     @Query("""
     SELECT 
@@ -45,23 +46,25 @@ interface InboundDao {
 
     @Query("SELECT * FROM Inbound")
     suspend fun getUnsyncedInbounds(): List<InboundEntity>
+    
     @Query("""
         SELECT 
             i.inboundDate as date, 
             'شراء' as transactionType, 
             CAST(i.invorseNum AS TEXT) as documentNumber, 
-            s.suppliedName as partyName, -- جلب اسم المورد
+            s.suppliedName as partyName, 
             id.amount as qtyIn, 
             0 as qtyOut
         FROM Inbound i
         JOIN InboundDetailes id ON i.id = id.InboundId
-        LEFT JOIN supplied s ON i.fromSppliedId = s.id -- ربط جدول الموردين
+        LEFT JOIN supplied s ON i.fromSppliedId = s.id
         WHERE id.ItemId = :itemId
     """)
     fun getInboundByItem(itemId: Int): Flow<List<ItemMovementProjection>>
 
     @Delete
     suspend fun delete(inbound: InboundEntity)
+    
     @Query("""
         SELECT ItemId as itemId, SUM(amount) as totalQty 
         FROM inbounddetailes 
@@ -69,9 +72,12 @@ interface InboundDao {
     """)
     fun getAllInboundQtyByItem(): Flow<List<ItemQuantity>>
 
-    // لو حابب تجيبها لصنف واحد فقط (اختياري)
     @Query("SELECT SUM(amount) FROM inbounddetailes WHERE ItemId = :itemId")
     fun getTotalInboundByItem(itemId: Int): Flow<Int?>
+
     @Query("SELECT * FROM Inbound WHERE id = :id LIMIT 1")
     fun getInboundByIdSync(id: String): InboundEntity?
+
+    @Query("SELECT * FROM inbounddetailes WHERE itemId = :itemId")
+    suspend fun getInboundsByItemStatic(itemId: Int): List<InboundDetailesEntity>
 }

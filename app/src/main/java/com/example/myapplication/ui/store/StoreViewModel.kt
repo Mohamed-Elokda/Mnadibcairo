@@ -7,6 +7,7 @@ import com.example.myapplication.data.local.Prefs
 import com.example.myapplication.domin.model.Stock
 import com.example.myapplication.domin.useCase.GetStockFromServer
 import com.example.myapplication.domin.useCase.GetStockUseCase
+import com.example.myapplication.domin.useCase.ReconcileAllStocks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.http.ContentType
@@ -22,6 +23,7 @@ import javax.inject.Inject
 class StoreViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val getStockUseCase: GetStockUseCase,
+    private val reconcileAllStocks: ReconcileAllStocks,
     private val getStockFromServer: GetStockFromServer
 ) : ViewModel() {
     private val userId: String = Prefs.getUserId(context) ?: ""
@@ -43,6 +45,11 @@ class StoreViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = StoreState.Loading
         )
+
+    fun refreshStockItems() {
+        viewModelScope.launch {
+        reconcileAllStocks.invoke()
+    }}
 
     // دالة للجلب الأولي فقط إذا كان المحلي فارغاً
     private fun fetchInitialDataIfNeeded() {

@@ -9,6 +9,7 @@ import com.example.myapplication.data.repository.TransferRepositoryImpl
 import com.example.myapplication.domin.repository.CustomerRepo
 import com.example.myapplication.domin.repository.ITransferRepository
 import com.example.myapplication.domin.repository.OutboundRepo
+import com.example.myapplication.domin.repository.PaymentRepository
 import com.example.myapplication.domin.repository.ReturnedRepo
 import com.example.myapplication.domin.repository.StockRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,6 +25,7 @@ class SyncViewModel @Inject constructor(
     private val outboundRepo: OutboundRepo,
     private val returnedRepo: ReturnedRepo,
     private val stockRepo: StockRepository,
+    private val paymentRepository: PaymentRepository,
     private val transferRepository: ITransferRepository,
     @ApplicationContext private val context: Context,
     private val inbound: InboundRepositoryImpl,
@@ -70,6 +72,9 @@ class SyncViewModel @Inject constructor(
 
                 _syncStatus.value = SyncState.Progress("جاري تحميل فواتير  الوارد...")
                 inbound.syncInboundFromServer(userId)
+
+                _syncStatus.value = SyncState.Progress("جاري تحميل توريدات العملاء ...")
+                paymentRepository.syncPaymentsFromServer(userId)
 
 
                 _syncStatus.value = SyncState.Progress("جاري تحميل بيانات الموردين...")

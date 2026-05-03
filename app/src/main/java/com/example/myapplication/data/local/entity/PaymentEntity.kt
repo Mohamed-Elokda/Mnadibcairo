@@ -6,8 +6,9 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "payments")
 data class PaymentEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val customerId: Int,  // 👈 تأكد من أن الاسم مطابق تماماً هنا
+    @PrimaryKey()
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val customerId: Int,
     val amount: Double,
     val paymentType: String,
     val date: String,

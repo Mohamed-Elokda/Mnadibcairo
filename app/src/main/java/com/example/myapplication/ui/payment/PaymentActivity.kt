@@ -13,6 +13,7 @@ import androidx.core.widget.addTextChangedListener
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.myapplication.R
+import com.example.myapplication.core.scheduleSync
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.repository.CustomerRepoImpl
 import com.example.myapplication.data.repository.PaymentRepositoryImpl
@@ -34,6 +35,7 @@ class PaymentActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+        scheduleSync(context = this)
 
         val rvPayments = findViewById<RecyclerView>(R.id.rvPayments)
         val etSearch = findViewById<EditText>(R.id.etSearchPayment)

@@ -8,8 +8,9 @@ data class ReturnedDto(
     val customer_id: Int,
     val user_id: String,
     val returned_date: String,
+    val invoiceNum: String,
     val latitude: Double,
     val longitude: Double,
-    val updated_at: Long? = null // ستقوم Supabase بتعبئته تلقائياً عند الجلب
+    val updated_at: Long
 
 )

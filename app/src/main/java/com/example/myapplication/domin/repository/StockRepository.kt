@@ -8,4 +8,5 @@ interface StockRepository {
     fun getItemMovement(itemId: Int): Flow<List<ItemMovement>>
     fun getStockData(): Flow<List<Stock>>
     suspend fun syncStockFromServer(userId: String)
+    suspend fun reconcileAllStocks()
 }

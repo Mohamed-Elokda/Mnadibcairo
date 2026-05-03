@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.inbound
 
 import android.R.attr.padding
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
@@ -23,6 +24,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.myapplication.R
+import com.example.myapplication.core.scheduleSync
 import com.example.myapplication.data.formatToEnglish
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.Prefs
@@ -48,7 +50,6 @@ class InboundActivity : AppCompatActivity() {
         setContentView(R.layout.activity_inbound)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.mainadI)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // بنخلي الـ Padding يراعي ارتفاع الـ StatusBar من فوق والـ NavigationBar من تحت
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
@@ -57,6 +58,7 @@ class InboundActivity : AppCompatActivity() {
         val etSearch = findViewById<EditText>(R.id.etSearch)
 
         btnBack.setOnClickListener { finish() }
+        scheduleSync(context = this)
 
         viewModel.getInbounds(Prefs.getUserId(this)!!).observe(this) { inboundList ->
             try {
@@ -98,6 +100,7 @@ class InboundActivity : AppCompatActivity() {
 
 
 
+    @SuppressLint("SuspiciousIndentation")
     private fun showUpdateDeleteMenu(view: View, inbound: Inbound) {
         val popup = PopupMenu(this, view)
 
@@ -110,14 +113,10 @@ class InboundActivity : AppCompatActivity() {
         val cleanedInvoiceDate = formatToEnglishDigits(rawDate)
 
         // 3. التحقق من الشرط (نفس اليوم)
-        if (currentDateStr == cleanedInvoiceDate) {
+
             popup.menu.add("تعديل")
             popup.menu.add("حذف")
-        } else {
-            // اختياري: إظهار خيار "عرض" فقط أو رسالة توضيحية
-            val item = popup.menu.add("لا يمكن التعديل/الحذف (تاريخ قديم)")
-            item.isEnabled = false
-        }
+
 
         popup.setOnMenuItemClickListener { item ->
             when (item.title) {

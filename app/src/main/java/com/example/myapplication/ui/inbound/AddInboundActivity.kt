@@ -422,7 +422,7 @@ class AddInboundActivity : AppCompatActivity() {
         tableItems.addView(row)
     }
     private fun getCurrentDate(): String {
-        return SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).format(Date())
+        return  SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ENGLISH).format(Date())
     }
 
     private fun fillTableFromAI(jsonString: String) {

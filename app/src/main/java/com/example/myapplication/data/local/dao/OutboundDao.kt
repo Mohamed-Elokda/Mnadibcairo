@@ -9,6 +9,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.example.myapplication.data.local.entity.ItemHistoryProjection
 import com.example.myapplication.data.local.entity.ItemMovementProjection
+import com.example.myapplication.data.local.entity.OutboundDetailesEntity
 import com.example.myapplication.data.local.entity.OutboundEntity
 import com.example.myapplication.data.local.entity.OutboundWithCustomer
 import com.example.myapplication.data.local.entity.OutboundWithDetails
@@ -105,6 +106,14 @@ interface OutboundDao {
     GROUP BY itemId
 """)
     fun getAllOutboundQtyByItem(): Flow<List<ItemQuantity>>
+
+    @Query("SELECT * FROM outbounddetailes WHERE itemId = :itemId")
+    suspend fun getOutboundsByItemStatic(itemId: Int): List<OutboundDetailesEntity>
+
+
+    @Transaction
+    @Query("SELECT * FROM outbound WHERE customerId = :customerId")
+    suspend fun getOutboundsByCustomerStatic(customerId: Int): List<OutboundWithDetails>
 
 }
 

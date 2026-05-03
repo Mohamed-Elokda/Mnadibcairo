@@ -15,8 +15,7 @@ interface CustomerDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(customers: List<Customer>)
-    @Query("UPDATE Customer SET customerDebt = customerDebt + :amount WHERE id = :customerId")
-    suspend fun updateCustomerDebt(customerId: Int, amount: Double)
+
 
     @Query("SELECT * FROM Customer WHERE userId = :userId")
     fun getAllCustomers(userId: String): Flow<List<Customer>>
@@ -77,4 +76,14 @@ interface CustomerDao {
 
     @Query("SELECT customerName FROM Customer")
     suspend fun getAllCustomerNames(): List<String>
+
+
+    @Query("SELECT * FROM customer")
+    suspend fun getAllCustomersStatic(): List<Customer>
+
+    @Query("UPDATE customer SET customerDebt = :debt WHERE id = :customerId")
+    suspend fun updateCustomerDebt(customerId: Int, debt: Double)
+
+    @Query("UPDATE customer SET  updatedAt = :time WHERE id = :customerId")
+    suspend fun markCustomerAsUnsynced(customerId: Int, time: Long = System.currentTimeMillis())
 }

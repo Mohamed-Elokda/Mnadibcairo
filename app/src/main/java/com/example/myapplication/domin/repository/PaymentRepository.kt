@@ -7,7 +7,8 @@ interface PaymentRepository {
         customerId: Int,
         amount: Double,
         type: String,
-        notes: String    ): Boolean
+        notes: String ): Boolean
 
     suspend fun getAllPayments(): List<PaymentItem>
+    suspend fun syncPaymentsFromServer(userId: String)
 }

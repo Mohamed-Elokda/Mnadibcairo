@@ -21,8 +21,10 @@ import com.example.myapplication.data.local.entity.VaultEntity
 import com.example.myapplication.data.remote.dto.CustomerDto
 import com.example.myapplication.data.remote.dto.InboundDetailsDto
 import com.example.myapplication.data.remote.dto.InboundDto
+import com.example.myapplication.data.remote.dto.ItemsDto
 import com.example.myapplication.data.remote.dto.OutboundDetailsDto
 import com.example.myapplication.data.remote.dto.OutboundDto
+import com.example.myapplication.data.remote.dto.PaymentDto
 import com.example.myapplication.data.remote.dto.ReturnedDetailsDto
 import com.example.myapplication.data.remote.dto.ReturnedDto
 import com.example.myapplication.data.remote.dto.StockDto
@@ -102,9 +104,45 @@ fun PaymentEntity.toDomainModel(customerName: String): PaymentItem {
         amount = this.amount,
         date = this.date,
         paymentType = this.paymentType,
-        userId = this.id // أو قم بتمريره حسب حاجتك
+        userId = this.id,
+        notes = this.notes // أو قم بتمريره حسب حاجتك
     )
 }
+
+
+// من Entity (موبايل) إلى Dto (سيرفر)
+fun PaymentEntity.toDto() = PaymentDto(
+    id = id,
+    customer_id = customerId,
+    amount = amount,
+    payment_type = paymentType,
+    date = date,
+    notes = notes,
+    updated_at = updatedAt,
+    user_id = ""
+)
+
+fun ItemsDto.toEntity(): ItemsEntity {
+    return ItemsEntity(
+        // ملاحظة: إذا كان الـ Primary Key في الموبايل هو الـ itemNum
+        // تأكد من تمريره بشكل صحيح هنا
+        itemNum = this.itemNum.toInt(),
+        itemName = this.itemName,
+
+        updatedAt = this.updated_at ?: System.currentTimeMillis()
+    )
+}
+
+// من Dto (سيرفر) إلى Entity (موبايل)
+fun PaymentDto.toEntity() = PaymentEntity(
+    id = id,
+    customerId = customer_id,
+    amount = amount,
+    paymentType = payment_type,
+    date = date,
+    notes = notes,
+    updatedAt = updated_at
+)
 fun OutboundDetailesEntity.toDto(): OutboundDetailsDto {
     return OutboundDetailsDto(
 
@@ -125,6 +163,7 @@ fun ReturnedModel.toReturnedEntity(): ReturnedEntity{
         returnedDate = returnedDate.formatToEnglish(),
         latitude = this.latitude,
         longitude = this.longitude,
+        invoiceNum=this.invoiceNum,
         isSynced = false,
         userId = this.userId
     )
@@ -139,7 +178,8 @@ fun ReturnedModel.toReturnedEntity(): ReturnedEntity{
         latitude = this.latitude,
         longitude = this.longitude,
         userId = this.userId,
-        updateAt = this.updatedAt
+        updateAt = this.updatedAt,
+        invoiceNum = this.invoiceNum
     )
 
 
@@ -153,7 +193,8 @@ fun ReturnedWithNames.toReturnedModel(): ReturnedWithNameModel {
             latitude = this.returned.latitude,
             longitude = this.returned.longitude,
             userId = this.returned.userId,
-            updateAt = this.returned.updatedAt
+            updateAt = this.returned.updatedAt,
+            invoiceNum = this.returned.invoiceNum
         ),
         customerName = this.customerName?:"",
         itemName = this.itemName?:"",
@@ -205,13 +246,15 @@ fun ReturnedDetailsModel.toReturnedEntity(): ReturnedDetailsEntity{
 // في ملف Mappers.kt
 fun ReturnedDto.toEntity(): ReturnedEntity {
     return ReturnedEntity(
-        id = this.id , // أو حسب تعريف الـ ID عندك
+        id = this.id, // أو حسب تعريف الـ ID عندك
         userId = this.user_id,
         customerId = this.customer_id,
         isSynced = true,
         returnedDate = this.returned_date,
         latitude = this.latitude,
-        longitude = this.longitude// بما أنها قادمة من السيرفر فهي مزامنة بالتأكيد
+        longitude = this.longitude,
+        invoiceNum = this.invoiceNum,
+        updatedAt = this.updated_at
     )
 }
 // تحويل بيانات السيرفر إلى جدول المخزن المحلي
@@ -241,7 +284,7 @@ fun Inbound.toEntity(): InboundEntity {
 }
 fun Outbound.toEntity(): OutboundEntity {
     return OutboundEntity(
-        id=this.id,
+        id = this.id,
         userId = this.userId, // تحويل Int إلى String إذا كان الـ Entity يتوقع String
         customerId = this.customerId,
         image = this.image,
@@ -252,7 +295,8 @@ fun Outbound.toEntity(): OutboundEntity {
         isSynced = this.isSynced,
         invorseNumber = this.invorseNumber,
         previousDebt = this.previousDebt,
-        totalRemainder = this.totalRemainder
+        totalRemainder = this.totalRemainder,
+        updatedAt =this.updatedAt
         // تأكد من إضافة invorseNumber في الـ OutboundEntity أيضاً إذا لم تكن موجودة
     )
 }
@@ -268,8 +312,8 @@ fun OutboundDto.toEntity(): OutboundEntity {
         moneyResive = this.moneyReceive,
         isSynced = true,
         invorseNumber = this.invoiceNumber,
-        previousDebt = this.previousDebt,
-        totalRemainder = this.totalRemainder,
+        previousDebt = this.previousDebt?:0.0,
+        totalRemainder = this.totalRemainder?:0.0,
         // تأكد من إضافة invorseNumber في الـ OutboundEntity أيضاً إذا لم تكن موجودة
     )
 }
@@ -367,6 +411,7 @@ fun ReturnedEntity.toDomain() = ReturnedModel(
     latitude = this.latitude,
     longitude = this.longitude,
     updateAt = this.updatedAt,
+    invoiceNum = this.invoiceNum,
 )
 
 fun ReturnedModel.toEntity(isSynced: Boolean = false) = ReturnedEntity(
@@ -377,7 +422,8 @@ fun ReturnedModel.toEntity(isSynced: Boolean = false) = ReturnedEntity(
     latitude = this.latitude,
     longitude = this.longitude,
     isSynced = isSynced,
-    updateAt
+    invoiceNum = invoiceNum,
+    updatedAt = updateAt
 )
 fun InboundDetailesEntity.toDto(): InboundDetailsDto{
     return InboundDetailsDto(
@@ -416,7 +462,8 @@ fun ReturnedEntity.toDto() = ReturnedDto(
     longitude = longitude,
     user_id = this.userId,
     id = id,
-    updated_at =updatedAt
+    updated_at = updatedAt,
+    invoiceNum = invoiceNum
 )
 
 fun ReturnedDetailsEntity.toDto() = ReturnedDetailsDto(

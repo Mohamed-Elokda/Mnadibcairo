@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.example.myapplication.data.local.entity.ItemMetadata
 import com.example.myapplication.data.local.entity.ItemsEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -15,6 +16,9 @@ interface ItemsDao {
     suspend fun insertItemsList(items: List<ItemsEntity>)
     @Query("SELECT * FROM Items")
      fun getAllItems(): Flow<List<ItemsEntity>>
+
+    @Query("SELECT itemNum, updated_at FROM items")
+    suspend fun getAllLocalItemsMetadata(): List<ItemMetadata>
     @Query("SELECT * FROM Items WHERE id = :id LIMIT 1")
     suspend fun getItemById(id: Int): ItemsEntity?
     @Query("SELECT COUNT(*) FROM Items") // تأكد من اسم الجدول لديك

@@ -25,5 +25,5 @@ interface OutboundRepo {
 
 
     suspend fun updateInvoice(outbound: Outbound, details: List<OutboundDetails>)
-    suspend fun syncWithConflictResolution()
+    suspend fun syncItemFromServer()
 }

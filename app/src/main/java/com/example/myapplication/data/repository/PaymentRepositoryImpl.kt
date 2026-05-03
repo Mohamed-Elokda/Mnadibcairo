@@ -6,9 +6,14 @@ import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.dao.CustomerDao
 import com.example.myapplication.data.local.dao.PaymentDao
 import com.example.myapplication.data.local.entity.PaymentEntity
+import com.example.myapplication.data.remote.dto.PaymentDto
+import com.example.myapplication.data.remote.dto.TransferDto
 import com.example.myapplication.data.toDomainModel
+import com.example.myapplication.data.toEntity
 import com.example.myapplication.domin.model.PaymentItem
 import com.example.myapplication.domin.repository.PaymentRepository
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
@@ -19,6 +24,7 @@ import javax.inject.Inject
 import kotlin.collections.map
 
 class PaymentRepositoryImpl @Inject constructor(
+    private val supabaseClient: SupabaseClient,
     private val database: AppDatabase,
     private val paymentDao: PaymentDao,
     private val customerDao: CustomerDao
@@ -53,7 +59,35 @@ class PaymentRepositoryImpl @Inject constructor(
             false // فشلت العملية
         }
     }
+    override suspend fun syncPaymentsFromServer(userId: String) {
+        try {
+            // 1. جلب كافة المدفوعات المرتبطة بالمندوب (عن طريق userId أو أي وسيلة ربط أخرى)
+            val remotePayments = supabaseClient.from("payments")
+                .select { filter { eq("user_id", userId) } }
+                .decodeList<PaymentDto>()
 
+            remotePayments.forEach { remoteDto ->
+                // 2. جلب النسخة المحلية للتحقق
+                val localPayment = paymentDao.getPaymentByIdSync(remoteDto.id)
+
+                // 3. المزامنة إذا كان السجل جديداً أو بيانات السيرفر أحدث
+                if (localPayment == null || (remoteDto.updated_at > localPayment.updatedAt)) {
+
+                    // تحويل الـ DTO إلى Entity وحفظه في Room
+                    // copy(isSynced = true) لضمان أن الموبايل لن يحاول رفعها مرة أخرى
+                    val paymentToSave = remoteDto.toEntity().copy(
+                        updatedAt = remoteDto.updated_at,
+                    )
+
+                    paymentDao.insertPayment(paymentToSave)
+
+                    Log.d("Sync", "✅ تم تحديث سند قبض رقم ${remoteDto.id} من السيرفر")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("Sync", "❌ خطأ في جلب المدفوعات: ${e.message}")
+        }
+    }
     // ✅ يجب إضافة كلمة suspend هنا أيضاً
     override suspend fun getAllPayments(): List<PaymentItem> {
         val entities = paymentDao.getAllPayments()

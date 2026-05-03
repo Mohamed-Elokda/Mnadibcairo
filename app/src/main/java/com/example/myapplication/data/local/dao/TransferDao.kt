@@ -88,7 +88,9 @@ interface TransferDao {
     WHERE td.transferId = :transferId
 """)
     fun getTransferDetailsWithNames(transferId: String): Flow<List<TransferDetailWithItemName>>
+    @Query("SELECT * FROM transferdetails WHERE itemId = :itemId")
+    suspend fun getTransfersByItemStatic(itemId: Int): List<TransferDetailsEntity>
 
 
-        // ... الدوال السابقة (insertTransfer, etc)
+    // ... الدوال السابقة (insertTransfer, etc)
     }

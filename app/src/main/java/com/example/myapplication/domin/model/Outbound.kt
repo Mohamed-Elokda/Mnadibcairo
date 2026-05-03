@@ -13,7 +13,7 @@ data class Outbound (
     val outboundDate: String,
     val latitude: Double=0.0,
     val longitude: Double=0.0,
-    val moneyResive: Int,
+    val moneyResive: Double, // تم التغيير من Int إلى Double لدعم القروش
     val previousDebt: Double = 0.0,
     val totalRemainder: Double = 0.0,
     val updatedAt: Long ,

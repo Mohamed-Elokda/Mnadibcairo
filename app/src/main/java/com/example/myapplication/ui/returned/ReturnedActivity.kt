@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.myapplication.R
 import com.example.myapplication.core.formatToEnglishDigits
+import com.example.myapplication.core.scheduleSync
 import com.example.myapplication.core.showUpdateDeleteMenu
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.repository.CustomerRepoImpl
@@ -55,7 +56,8 @@ class ReturnedActivity : AppCompatActivity() {
         observeViewModel()
         setupSearchAndAdd()
 
-        viewModel.syncData()
+        scheduleSync(context = this)
+
     }
 
     private fun setupRecyclerView() {
@@ -65,6 +67,7 @@ class ReturnedActivity : AppCompatActivity() {
                 val intent = Intent(this, ReturnedDetailsActivity::class.java).apply {
                     // نرسل الـ ID والبيانات الأساسية لتعرضها شاشة التفاصيل فوراً
                     putExtra("RETURNED_ID", item.returnedModel.id)
+                    putExtra("RETURNED_Num", item.returnedModel.invoiceNum)
                     putExtra("CUSTOMER_NAME", item.customerName)
                     putExtra("DATE", item.returnedModel.returnedDate)
                 }

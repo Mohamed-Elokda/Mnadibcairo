@@ -62,6 +62,8 @@ class StoresActivity : AppCompatActivity() {
 
         initViews()
         setupObservers()
+
+        storeViewModel.refreshStockItems()
         etSearch.addTextChangedListener { text ->
             val filteredList = items.filter {
                 it.itemName.contains(text.toString(), ignoreCase = true)

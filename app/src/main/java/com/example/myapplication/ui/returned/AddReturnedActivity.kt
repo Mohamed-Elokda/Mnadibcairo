@@ -16,6 +16,7 @@ import com.example.myapplication.R
 import com.example.myapplication.data.local.Prefs
 import com.example.myapplication.data.local.entity.ItemsEntity
 import com.example.myapplication.domin.model.CustomerModel
+import com.example.myapplication.domin.model.Items
 import com.example.myapplication.domin.model.ReturnedDetailsModel
 import com.example.myapplication.domin.model.ReturnedModel
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -33,10 +34,12 @@ class AddReturnedActivity : AppCompatActivity() {
     private val tempItemsList = mutableListOf<ReturnedDetailsModel>()
     private var totalInvoiceAmount = 0.0
     private var currentReturnedId: String = "" // لتخزين ID الفاتورة في حالة التعديل
+    private var selectedItem: Items? = null
 
     private lateinit var autoCustomer: AutoCompleteTextView
     private lateinit var autoItem: AutoCompleteTextView
     private lateinit var etQuantity: EditText
+    private lateinit var etInvoiceNumber: EditText
     private lateinit var etSellingPrice: EditText
     private lateinit var tvTotalInvoice: TextView
     private lateinit var tableItems: TableLayout
@@ -46,7 +49,7 @@ class AddReturnedActivity : AppCompatActivity() {
     private lateinit var itemAdapter: ArrayAdapter<String>
 
     private var currentCustomerModels = listOf<CustomerModel>()
-    private var currentItems = listOf<ItemsEntity>()
+    private var currentItems = listOf<Items>()
     private var selectedCustomerId: Int = -1
 
     private val viewModel: ReturnedViewModel by viewModels()
@@ -63,6 +66,7 @@ class AddReturnedActivity : AppCompatActivity() {
 
     private fun initViews() {
         autoItem = findViewById(R.id.autoItem)
+        etInvoiceNumber = findViewById(R.id.etInvoiceNumber)
         autoCustomer = findViewById(R.id.autoCustomer)
         etQuantity = findViewById(R.id.etQuantity)
         etSellingPrice = findViewById(R.id.etSellingPrice)
@@ -71,6 +75,7 @@ class AddReturnedActivity : AppCompatActivity() {
         btnSave = findViewById(R.id.btnSave)
     }
 
+    @SuppressLint("DefaultLocale")
     private fun handleEditMode() {
         val isEditMode = intent.getBooleanExtra("EDIT_MODE", false)
         if (isEditMode) {
@@ -94,7 +99,8 @@ class AddReturnedActivity : AppCompatActivity() {
 
                         details.forEach { detail ->
                             val rowTotal = detail.amount * detail.price
-                            addRowToTable(tableItems, detail.itemName ?: "صنف", detail.amount, rowTotal,detail.price)
+                            addRowToTable(tableItems,
+                                detail.itemName, detail.amount, rowTotal,detail.price)
                             totalInvoiceAmount += rowTotal
                         }
                         tvTotalInvoice.text = String.format("%.2f ج.م", totalInvoiceAmount)
@@ -116,18 +122,66 @@ class AddReturnedActivity : AppCompatActivity() {
         }
 
         // 2. مراقبة كل الأصناف (تظهر فوراً بدون شرط العميل)
-        lifecycleScope.launch {
-            viewModel.allStockItems.collect { items ->
-                currentItems = items
-                val names = items.map { it.itemName }
-                itemAdapter = ArrayAdapter(this@AddReturnedActivity, android.R.layout.simple_dropdown_item_1line, names)
-                autoItem.setAdapter(itemAdapter)
-            }
+
+            viewModel.allItems.observe(this) { items ->
+                if (items.isNotEmpty() && ::autoItem.isInitialized) {
+                    currentItems = items
+                    val adapter = object : ArrayAdapter<Items>(
+                        this,
+                        android.R.layout.simple_dropdown_item_1line,
+                        ArrayList(items) // نسخة قابلة للتغيير
+                    ) {
+
+                        private val fullList = ArrayList(items) // النسخة الأصلية
+
+                        override fun getFilter(): Filter {
+                            return object : Filter() {
+
+                                override fun performFiltering(constraint: CharSequence?): FilterResults {
+                                    val results = FilterResults()
+
+                                    val filteredList = if (constraint.isNullOrBlank()) {
+                                        fullList
+                                    } else {
+                                        val searchTerms = constraint.toString().split("+")
+                                            .map { it.trim() }
+                                            .filter { it.isNotEmpty() }
+
+                                        fullList.filter { item ->
+                                            searchTerms.all { term ->
+                                                item.itemName.contains(term, ignoreCase = true)
+                                            }
+                                        }
+                                    }
+
+                                    results.values = filteredList
+                                    results.count = filteredList.size
+                                    return results
+                                }
+
+                                override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                                    clear()
+                                    if (results != null) {
+                                        addAll(results.values as List<Items>)
+                                    }
+                                    notifyDataSetChanged()
+                                }
+                            }
+                        }
+                    }
+                    autoItem.setAdapter(adapter)
+                    autoItem.setOnClickListener { autoItem.showDropDown() }
+                    autoItem.setOnItemClickListener { parent, _, position, _ ->
+                        val selected = parent.getItemAtPosition(position) as Items
+                        selectedItem= selected
+                    }
+                }
+
         }
 
         // 3. مراقبة حالة الحفظ
         lifecycleScope.launch {
-            viewModel.saveStatus.collect { resource ->
+            viewModel.saveStatus.collect { _ ->
 
                         Toast.makeText(this@AddReturnedActivity, "تمت العملية بنجاح", Toast.LENGTH_SHORT).show()
                         finish()
@@ -169,6 +223,7 @@ class AddReturnedActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("DefaultLocale")
     private fun addNewItemToTable() {
         val itemName = autoItem.text.toString()
         val qty = etQuantity.text.toString().toIntOrNull() ?: 0
@@ -201,10 +256,11 @@ class AddReturnedActivity : AppCompatActivity() {
             val model = ReturnedModel(
                 id = if (isEditMode) currentReturnedId else UUID.randomUUID().toString(),
                 customerId = selectedCustomerId,
-                returnedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()),
+                returnedDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ENGLISH).format(Date()),
                 userId = Prefs.getUserId(this) ?: "",
                 latitude = 0.0,
                 longitude = 0.0,
+                invoiceNum=etInvoiceNumber.text.toString(),
                 updateAt = System.currentTimeMillis(),
             )
 
@@ -214,6 +270,7 @@ class AddReturnedActivity : AppCompatActivity() {
         }
     }
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
+    @SuppressLint("DefaultLocale")
     private fun addRowToTable(table: TableLayout, name: String, qty: Int, total: Double, unitPrice: Double) {
         val row = TableRow(this).apply {
             setPadding(0, 4, 0, 4)
@@ -242,7 +299,6 @@ class AddReturnedActivity : AppCompatActivity() {
             background = null
         }
 
-        // 4. الإجمالي (TextView)
         val tvRowTotal = TextView(this).apply {
             text = String.format("%.2f", total)
             width = dpToPx(90)
@@ -289,12 +345,14 @@ class AddReturnedActivity : AppCompatActivity() {
     }
 
     // دالة لإعادة حساب إجمالي الفاتورة بالكامل
+    @SuppressLint("DefaultLocale")
     private fun recalculateGrandTotal() {
         totalInvoiceAmount = tempItemsList.sumOf { it.amount * it.price }
         tvTotalInvoice.text = String.format("%.2f ج.م", totalInvoiceAmount)
     }
 
     // عرض رصيد العميل عند الاختيار
+    @SuppressLint("DefaultLocale")
     private fun onCustomerSelected(customerModel: CustomerModel) {
         selectedCustomerId = customerModel.id
         val layoutDebt = findViewById<LinearLayout>(R.id.layoutCustomerDebt)

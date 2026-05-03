@@ -1,15 +1,19 @@
 package com.example.myapplication.ui.returned
 
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.local.entity.ItemsEntity
 import com.example.myapplication.domin.model.CustomerModel
 import com.example.myapplication.domin.model.ItemHistoryProjectionModel
+import com.example.myapplication.domin.model.Items
 import com.example.myapplication.domin.model.Resource
 import com.example.myapplication.domin.model.ReturnedDetailsModel
 import com.example.myapplication.domin.model.ReturnedModel
 import com.example.myapplication.domin.model.ReturnedWithNameModel
+import com.example.myapplication.domin.repository.IInboundRepository
 import com.example.myapplication.domin.repository.OutboundRepo
 import com.example.myapplication.domin.useCase.AddReturnedUseCase
 import com.example.myapplication.domin.useCase.DeleteReturnedUsecase
@@ -42,7 +46,7 @@ class ReturnedViewModel @Inject constructor(
     private val updateReturnedUseCase: UpdateReturnedUseCase, // أضف الـ UseCase الجديد هنا
     private val getAllCustomersUseCase: GetAllCustomersUseCase,
     private val getItemHistoryUseCase: GetItemHistoryUseCase,
-    private val outboundRepo: OutboundRepo // لجلب كل الأصناف
+    private val repository: IInboundRepository // ستحتاجه لباقي الدوال
 ) : ViewModel() {
 
     // 1. القوائم الأساسية
@@ -53,22 +57,8 @@ class ReturnedViewModel @Inject constructor(
     val returnedDetails = _returnedDetails.asStateFlow()
 
     // تحويل من List<Stock> إلى List<ItemsEntity>
-    val allStockItems: StateFlow<List<ItemsEntity>> = outboundRepo.getAllItems()
-        .map { stockList ->
-            stockList.map { stock ->
-                ItemsEntity(
-                    id = stock.ItemId, // تأكد من مطابقة الـ IDs
-                    itemName = stock.itemName,
-                    itemNum = 0,
-                    // أضف باقي الحقول المطلوبة لـ ItemsEntity هنا
-                )
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    val allItems: LiveData<List<Items>> = repository.getAllItems().asLiveData()
+
     // 3. حالة العملية (استبدل Boolean بـ Resource لنتائج أدق)
     private val _saveStatus = MutableSharedFlow<Resource<Unit>>()
     val saveStatus = _saveStatus.asSharedFlow()

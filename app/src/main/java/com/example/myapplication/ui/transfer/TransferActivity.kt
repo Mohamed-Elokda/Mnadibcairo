@@ -15,6 +15,7 @@ import com.example.myapplication.R
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.textfield.TextInputEditText
 import androidx.core.widget.doOnTextChanged
+import com.example.myapplication.core.scheduleSync
 import com.example.myapplication.data.local.AppDatabase
 import com.example.myapplication.data.local.Prefs
 import com.example.myapplication.data.repository.InboundRepositoryImpl
@@ -49,6 +50,7 @@ class TransferActivity : AppCompatActivity() {
         initViews()
         setupRecyclerView()
         setupObservers()
+        scheduleSync(context = this)
 
         // الانتقال لصفحة إضافة مناقلة جديدة
         btnAddTransfer.setOnClickListener {

@@ -15,9 +15,13 @@ import com.example.myapplication.domin.model.Stock
 import com.example.myapplication.domin.repository.StockRepository
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class StockRepoImpl @Inject constructor(
@@ -71,6 +75,7 @@ class StockRepoImpl @Inject constructor(
             Log.e("Sync", "خطأ في جلب المخزن: ${e.message}")
         }
     }
+    private val pendingUpdates = mutableSetOf<Int>()
 
     override fun getItemMovement(itemId: Int): Flow<List<ItemMovement>> {
         return combine(
@@ -161,7 +166,67 @@ class StockRepoImpl @Inject constructor(
                 finalReport.add(movement)
             }
 
+
+
+
             finalReport
+        }
+
+
+
+    }
+
+    // دالة لمزامنة كل الأصناف دفعة واحدة
+    override suspend fun reconcileAllStocks() {
+        withContext(Dispatchers.IO) {
+            try {
+                // 1. جلب كل الأصناف الموجودة في المخزن
+                val allItems = stockDao.getAllStockStatic()
+
+                allItems.forEach { stockItem ->
+                    val itemId = stockItem.ItemId
+
+                    // 2. جلب كل الحركات لهذا الصنف (Static وليس Flow)
+                    val inbounds = inboundDao.getInboundsByItemStatic(itemId)
+                    val outbounds = outboundDao.getOutboundsByItemStatic(itemId)
+                    val returns = returnedDao.getReturnsByItemStatic(itemId)
+                    val transfers = trDto.getTransfersByItemStatic(itemId)
+
+                    // 3. الحساب المنطقي (الرصيد الافتتاحي + الوارد - الصادر)
+                    var calculatedTotal = stockItem.InitAmount
+
+                    val totalIn = inbounds.sumOf { it.amount } + returns.sumOf { it.amount }
+                    val totalOut = outbounds.sumOf { it.amount } + transfers.sumOf { it.amount }
+
+                    calculatedTotal += (totalIn - totalOut)
+
+                    // 4. المقارنة والتحديث إذا لزم الأمر
+                    if (calculatedTotal != stockItem.CurrentAmount) {
+                        Log.d("Reconcile", "تم تصحيح الصنف $itemId: من ${stockItem.CurrentAmount} إلى $calculatedTotal")
+
+                        // تحديث محلي
+                        stockDao.updateCurrentStock(itemId, calculatedTotal)
+
+                        // وسمه للمزامنة مع السيرفر
+                        stockDao.markStockAsUnsynced(itemId)
+                    }
+                }
+                Log.d("Reconcile", "✅ اكتملت عملية مطابقة كل الأصناف")
+            } catch (e: Exception) {
+                Log.e("Reconcile", "❌ خطأ في المزامنة الشاملة: ${e.message}")
+            }
+        }
+    }
+    private fun updateStockToMatchMovement(itemId: Int, correctAmount: Int) {
+        // نستخدم CoroutineScope الخاص بالـ Repository أو الـ Global
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                stockDao.updateCurrentStock(itemId, correctAmount)
+                // تحديث حالة المزامنة لضمان رفع الرصيد الصحيح للسيرفر
+                stockDao.markStockAsUnsynced(itemId)
+            } catch (e: Exception) {
+                Log.e("Sync", "فشل تحديث المخزن للصنف $itemId: ${e.message}")
+            }
         }
     }
 }

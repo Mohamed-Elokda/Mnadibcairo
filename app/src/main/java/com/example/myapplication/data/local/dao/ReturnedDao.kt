@@ -8,6 +8,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.example.myapplication.data.local.entity.ItemMovementProjection
+import com.example.myapplication.data.local.entity.ReturnedDetailsEntity
 import com.example.myapplication.data.local.entity.ReturnedEntity
 import com.example.myapplication.data.local.entity.ReturnedWithDetails
 import com.example.myapplication.data.local.entity.ReturnedWithNames
@@ -79,4 +80,11 @@ interface ReturnedDao {
 
     @Delete
     suspend fun delete(returned: ReturnedEntity)
+
+    @Query("SELECT * FROM returnedDetails WHERE itemId = :itemId")
+    suspend fun getReturnsByItemStatic(itemId: Int): List<ReturnedDetailsEntity>
+
+    @Transaction
+    @Query("SELECT * FROM returned WHERE customerId = :customerId")
+    suspend fun getReturnsByCustomerStatic(customerId: Int): List<ReturnedWithDetails>
 }

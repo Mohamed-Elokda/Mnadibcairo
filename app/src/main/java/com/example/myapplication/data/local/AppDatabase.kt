@@ -51,7 +51,7 @@ import com.example.myapplication.data.local.entity.VaultEntity
         TransferEntity::class,
         VaultEntity::class
                ],
-    version = 29,
+    version = 31,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

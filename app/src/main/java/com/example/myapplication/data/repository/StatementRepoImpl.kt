@@ -1,10 +1,13 @@
 package com.example.myapplication.data.repository
 
+import android.util.Log
 import com.example.myapplication.data.local.dao.*
 import com.example.myapplication.domin.model.StatementTransaction
 import com.example.myapplication.domin.repository.StatementRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class StatementRepoImpl @Inject constructor(
@@ -195,4 +198,64 @@ class StatementRepoImpl @Inject constructor(
 
         }
 
+    }
+
+
+
+
+
+
+
+
+
+
+  override suspend fun reconcileAllCustomersDebt() {
+        withContext(Dispatchers.IO) {
+            try {
+                val customers = customerDao.getAllCustomersStatic()
+
+                customers.forEach { customer ->
+                    val customerId = customer.id
+
+                    // 1. جلب كل الحركات المالية
+                    val outbounds = outboundDao.getOutboundsByCustomerStatic(customerId)
+                    val payments = paymentDao.getPaymentsByCustomerStatic(customerId)
+                    val returns = returnedDao.getReturnsByCustomerStatic(customerId)
+
+                    // 2. الحساب المنطقي للمديونية
+                    // المديونية = الرصيد الافتتاحي
+                    var calculatedDebt = customer.firstCustomerDebt
+
+                    // + إجمالي الفواتير (نحسب سعر الأصناف في كل فاتورة)
+                    val totalSales = outbounds.sumOf { outboundWithDetails ->
+                        outboundWithDetails.details.sumOf { it.amount * it.price }
+                    }
+
+                    // - المبالغ المدفوعة لحظة البيع (Cash in Invoices)
+                    val totalPaidAtSale = outbounds.sumOf { it.outbound.moneyResive.toDouble() }
+
+                    // - المبالغ المدفوعة لاحقاً (Payments)
+                    val totalPayments = payments.sumOf { it.amount }
+
+                    // - المرتجعات
+                    val totalReturns = returns.sumOf { returnWithDetails ->
+                        returnWithDetails.details.sumOf { it.amount * it.price }
+                    }
+
+                    // الحسبة النهائية
+                    calculatedDebt += (totalSales - totalPaidAtSale - totalPayments - totalReturns)
+
+                    // 3. التحديث في حالة وجود اختلاف
+                    if (Math.abs(calculatedDebt - customer.customerDebt) > 0.01) { // استخدام فرق بسيط لتجنب مشاكل الـ Double
+                        Log.d("FinanceSync", "تصحيح مديونية العميل ${customer.customerName}: من ${customer.customerDebt} إلى $calculatedDebt")
+
+                        customerDao.updateCustomerDebt(customerId, calculatedDebt)
+                        customerDao.markCustomerAsUnsynced(customerId)
+                    }
+                }
+                Log.d("FinanceSync", "✅ اكتملت مطابقة حسابات العملاء")
+            } catch (e: Exception) {
+                Log.e("FinanceSync", "❌ خطأ في مطابقة الحسابات: ${e.message}")
+            }
+        }
     }}

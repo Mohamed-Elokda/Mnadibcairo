@@ -1,8 +1,10 @@
 [versions]
 agp = "8.13.2"
-kotlin = "2.0.21" # ارفع الكوتلن ليتماشى مع الـ KSP
-coreKtx = "1.12.0" # إصدار 1.17 غير موجود حالياً، المستقر هو 1.12 أو 1.13
-roomKtx = "2.6.1" # يفضل العودة للمستقر حالياً بدلاً من alpha
+kotlin = "2.0.21"
+ksp = "2.0.21-1.0.26"
+hilt = "2.52"
+coreKtx = "1.12.0"
+roomKtx = "2.6.1"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
@@ -46,3 +48,5 @@ androidx-hilt-common = { group = "androidx.hilt", name = "hilt-common", version.
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }

@@ -13,6 +13,7 @@ data class ReturnedEntity(
     val customerId: Int,
     val returnedDate: String,
     val userId: String,
+    val invoiceNum: String,
     val latitude: Double,
     val longitude: Double,
     val isSynced: Boolean,

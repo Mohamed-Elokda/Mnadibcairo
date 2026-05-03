@@ -147,11 +147,10 @@ class OutboundViewModel @Inject constructor(
     fun checkAndSyncItemsIfEmpty() {
         viewModelScope.launch(Dispatchers.IO) {
 
-            val count = outboundRepo.getItemsCount()
 
-            if (count == 0) {
+
                 outboundRepo.syncItemsFromServer()
-            }
+
         }
     }
 

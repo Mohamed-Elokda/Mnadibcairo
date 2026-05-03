@@ -19,7 +19,8 @@ interface StockDao {
     // دالة مفيدة لتصفير المخزن قبل المزامنة الشاملة (اختياري)
     @Query("DELETE FROM Stock WHERE userId = :userId")
     suspend fun clearStockForUser(userId: String)
-
+    @Query("SELECT * FROM stock")
+    suspend fun getAllStockStatic(): List<StockEntity>
     @Query("SELECT * FROM Stock WHERE ItemId = :itemId LIMIT 1")
     fun getStockByItemIdFlow(itemId: Int): Flow<StockEntity?>
     @Query("""
@@ -46,7 +47,12 @@ interface StockDao {
     @Query("UPDATE Stock SET CurrentAmount = CurrentAmount - :amount WHERE itemId = :id")
     suspend fun reduceStock(id: Int, amount: Int)
 
+    @Query("UPDATE stock SET CurrentAmount = :amount, updated_at = :currentTime WHERE ItemId = :itemId")
+    suspend fun updateCurrentStock(itemId: Int, amount: Int, currentTime: Long = System.currentTimeMillis())
 
+
+    @Query("UPDATE stock SET isSynced = 0, updated_at = :currentTime WHERE ItemId = :itemId")
+    suspend fun markStockAsUnsynced(itemId: Int, currentTime: Long = System.currentTimeMillis())
     @Query("""
     -- 1. المشتريات (Inbound) -> تزيد المخزن (qtyIn)
     SELECT 

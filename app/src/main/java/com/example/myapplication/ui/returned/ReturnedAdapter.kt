@@ -34,10 +34,9 @@ class ReturnedAdapter(private val onItemClick: (ReturnedWithNameModel) -> Unit,p
         fun bind(item: ReturnedWithNameModel, onItemClick: (ReturnedWithNameModel) -> Unit) {
             tvCustomerName.text = item.customerName
             tvReturnAmount.text = String.format("%.2f ج.م", item.totalPrice)
-            tvInvoiceId.text = "فاتورة أصلية: #${item.returnedModel.id}"
+            tvInvoiceId.text = "فاتورة رقم: #${item.returnedModel.invoiceNum}"
             tvReturnDate.text = item.returnedModel.returnedDate
 
-            // عرض السبب إذا وجد، أو إخفاء الحقل إذا كان فارغاً
 
 
             itemView.setOnClickListener { onItemClick(item) }

@@ -27,6 +27,7 @@ class PaymentsAdapter(private val onItemClick: (PaymentItem) -> Unit) :
     class PaymentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val tvCustomerName: TextView = itemView.findViewById(R.id.tvCustomerName)
         private val tvAmount: TextView = itemView.findViewById(R.id.tvAmount)
+        private val tvNote: TextView = itemView.findViewById(R.id.tvNote)
         private val tvDate: TextView = itemView.findViewById(R.id.tvDate)
         private val tvPaymentType: TextView = itemView.findViewById(R.id.tvPaymentType)
 
@@ -35,7 +36,7 @@ class PaymentsAdapter(private val onItemClick: (PaymentItem) -> Unit) :
             tvAmount.text = "${item.amount} ج.م"
             tvDate.text = item.date
             tvPaymentType.text = item.paymentType
-
+            tvNote.text=item.notes
             // تغيير لون الخلفية والنص بناءً على نوع العملية
             val context = itemView.context
             when (item.paymentType) {

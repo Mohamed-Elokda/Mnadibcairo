@@ -8,7 +8,7 @@ import kotlinx.serialization.SerialName
 @Entity(tableName = "Outbound")
 data class OutboundEntity (
     @PrimaryKey()
-    val id: String = java.util.UUID.randomUUID().toString(), // توليد ID فريد عالمياً    val outbound_id: Int,
+    val id: String = java.util.UUID.randomUUID().toString(), // توليد ID فريد عالمياً
     val customerId: Int,
     val invorseNumber: Int,
     val image: String,
@@ -16,7 +16,7 @@ data class OutboundEntity (
     val userId: String,
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
-    val moneyResive: Int, // المبلغ المدفوع حالياً
+    val moneyResive: Double, // تم التغيير من Int إلى Double لدعم القروش
 
     // الأعمدة الجديدة
     val previousDebt: Double,   // الرصيد السابق (مديونية العميل قبل هذه الفاتورة)

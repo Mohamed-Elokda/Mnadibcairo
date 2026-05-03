@@ -25,6 +25,8 @@ import dagger.hilt.android.AndroidEntryPoint
 class CustomersActivity : AppCompatActivity() {
 
     private  val viewModel: OutboundViewModel by viewModels()
+    private val StatementViewModel: StatementViewModel by viewModels()
+
     private lateinit var rvCustomers: RecyclerView
     private lateinit var tvTotalDebt: TextView
     private lateinit var adapter: CustomerAdapter
@@ -44,6 +46,7 @@ class CustomersActivity : AppCompatActivity() {
         }
 
         initViews()
+        StatementViewModel.refreshCustomersDept()
         adapter = CustomerAdapter(fullList) { customer ->
             val intent = Intent(this@CustomersActivity,
                 CustomerStatementActivity::class.java)
@@ -51,7 +54,11 @@ class CustomersActivity : AppCompatActivity() {
             intent.putExtra("CUSTOMER_ID", customer.id)
             intent.putExtra("CUSTOMER_NAME", customer.customerName)
 
-            startActivity(intent)        }
+            startActivity(intent)
+
+
+
+        }
 
         rvCustomers.layoutManager = LinearLayoutManager(this)
         rvCustomers.adapter = adapter

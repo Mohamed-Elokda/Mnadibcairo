@@ -19,7 +19,10 @@ import com.example.myapplication.data.repository.TransferRepositoryImpl
 import com.example.myapplication.domin.repository.IInboundRepository
 import com.example.myapplication.domin.useCase.AddTransferUseCase
 import dagger.hilt.android.AndroidEntryPoint
+import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.util.Date
+import java.util.Locale
 
 @AndroidEntryPoint
 class AddTransferActivity : AppCompatActivity() {
@@ -187,7 +190,7 @@ class AddTransferActivity : AppCompatActivity() {
             transferNum = invoiceNum.toInt(),
             fromStoreId = Prefs.getUserId(this@AddTransferActivity)?:"",
             toStoreId = selectedToStoreId,
-            date = LocalDate.now().toString(), // يفضل جلب التاريخ الحالي برمجياً
+            date =  SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ENGLISH).format(Date()),
             userId = Prefs.getUserId(this) ?: "",
             isSynced = false
         )

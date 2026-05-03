@@ -13,9 +13,9 @@ data class OutboundDto(
     @SerialName("outbound_date") val outboundDate: String? = null,
     @SerialName("latitude") val latitude: Double,
     @SerialName("longitude") val longitude: Double,
-    @SerialName("money_receive") val moneyReceive: Int,
-    val previousDebt: Double ,   // الرصيد السابق (مديونية العميل قبل هذه الفاتورة)
-    val totalRemainder: Double , // المتبقي النهائي (الرصيد السابق + إجمالي الفاتورة - المدفوع)
+    @SerialName("money_receive") val moneyReceive: Double, // تم التغيير من Int إلى Double لدعم الكسور عند المزامنة
+    val previousDebt: Double? = 0.0 ,   // الرصيد السابق (مديونية العميل قبل هذه الفاتورة)
+    val totalRemainder:Double? = 0.0 , // المتبقي النهائي (الرصيد السابق + إجمالي الفاتورة - المدفوع)
 
     val updated_at: Long? = null, // ستقوم Supabase بتعبئته تلقائياً عند الجلب
 

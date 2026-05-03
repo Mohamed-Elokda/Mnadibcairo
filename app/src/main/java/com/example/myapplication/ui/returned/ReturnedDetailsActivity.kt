@@ -32,13 +32,14 @@ class ReturnedDetailsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_returned_details)
 
         val returnedId = intent.getStringExtra("RETURNED_ID")?:""
+        val returnedNum = intent.getStringExtra("RETURNED_Num")?:""
         val customerName = intent.getStringExtra("CUSTOMER_NAME") ?: "غير معروف"
         val date = intent.getStringExtra("DATE") ?: ""
 
         // ربط البيانات الأساسية
         findViewById<TextView>(R.id.tvDetCustomerName).text = "العميل: $customerName"
         findViewById<TextView>(R.id.tvDetDate).text = "التاريخ: $date"
-        findViewById<TextView>(R.id.tvDetInvoiceId).text = "رقم العملية: #$returnedId"
+        findViewById<TextView>(R.id.tvDetInvoiceId).text = "رقم العملية: #$returnedNum"
 
         val rv = findViewById<RecyclerView>(R.id.rvReturnedDetails)
         val adapter = ReturnedDetailsAdapter() // ستحتاج لإنشاء هذا الـ Adapter

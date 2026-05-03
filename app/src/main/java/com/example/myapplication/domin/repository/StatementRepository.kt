@@ -5,4 +5,5 @@ import kotlinx.coroutines.flow.Flow
 
 interface StatementRepository {
     fun getCustomerStatement(customerId: Int): Flow<List<StatementTransaction>>
+    suspend fun reconcileAllCustomersDebt()
 }
